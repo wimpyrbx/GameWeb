@@ -11,8 +11,11 @@ import {
   Gamepad, 
   Plus, 
   Library,
-  Database
+  Database,
+  Trash2
 } from 'lucide-react'; // Import icons for view switching
+import EditGameModal from '../../components/games/EditGameModal';
+import AddGameModal from '../../components/games/AddGameModal';
 
 const Dashboard = () => {
   const [collection, setCollection] = useState([]);
@@ -21,6 +24,16 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [viewType, setViewType] = useState('card'); // State to manage view type
+  const [formData, setFormData] = useState({
+    gameId: '',
+    boxCondition: '3',
+    manualCondition: '3',
+    discCondition: '3'
+  });
+  const [editingGame, setEditingGame] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedGame, setSelectedGame] = useState(null);
 
   useEffect(() => {
     const loadViewType = async () => {
@@ -40,14 +53,28 @@ const Dashboard = () => {
         collectionDB.getAllCollectionItems()
       ]);
 
+      // First, create a map of games by ID for easy lookup
+      const gamesMap = allGames.reduce((acc, game) => {
+        acc[game.id] = game;
+        return acc;
+      }, {});
+
+      // Enhance collection items with game details
+      const enhancedCollectionItems = collectionItems.map(item => ({
+        ...item,
+        gameDetails: gamesMap[item.gameId] || null
+      }));
+
       // Fetch CIB prices for all games in the collection
-      const pricesPromises = collectionItems.map(item => 
-        pricesDB.getLatestPrice(item.gameDetails.pricechartingId)
+      const pricesPromises = enhancedCollectionItems.map(item => 
+        item.gameDetails?.pricechartingId ? 
+          pricesDB.getLatestPrice(item.gameDetails.pricechartingId) : 
+          Promise.resolve(null)
       );
       const prices = await Promise.all(pricesPromises);
 
       // Map prices back to collection items
-      const updatedCollection = collectionItems.map((item, index) => ({
+      const updatedCollection = enhancedCollectionItems.map((item, index) => ({
         ...item,
         cibPrice: prices[index] ? prices[index].cib : null
       }));
@@ -62,10 +89,29 @@ const Dashboard = () => {
     }
   };
 
-  const handleAddToCollection = async (e) => {
-    e.preventDefault();
-    // Your logic for adding a game to the collection
-    // Ensure you have the necessary state and form handling here
+  const handleAddToCollection = async (formData) => {
+    try {
+      setLoading(true);
+      
+      const collectionItem = {
+        gameId: parseInt(formData.gameId),
+        consoleId: games.find(g => g.id === parseInt(formData.gameId))?.consoleId,
+        regionId: games.find(g => g.id === parseInt(formData.gameId))?.regionId,
+        addedDate: new Date().toISOString(),
+        boxCondition: formData.boxCondition,
+        discCondition: formData.discCondition,
+        manualCondition: formData.manualCondition,
+        price_override: null
+      };
+
+      await collectionDB.addCollectionItem(collectionItem);
+      setShowAddModal(false);
+      await loadData();
+    } catch (error) {
+      setError('Failed to add game to collection: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleViewChange = async (type) => {
@@ -73,212 +119,303 @@ const Dashboard = () => {
     await saveSetting('collectionViewType', type); // Save the selected view type
   };
 
+  const handleConditionChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleDeleteCollectionItem = async (id) => {
+    if (!window.confirm('Are you sure you want to remove this game from your collection?')) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await collectionDB.deleteCollectionItem(id);
+      await loadData(); // Reload the collection after deletion
+    } catch (error) {
+      setError('Failed to delete collection item: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEdit = (game) => {
+    setEditingGame(game);
+  };
+
+  const handleSave = async (editedGame) => {
+    try {
+      setLoading(true);
+      // Add API call to save changes
+      await collectionDB.updateCollectionItem(editedGame);
+      setEditingGame(null);
+      await loadData();
+    } catch (error) {
+      setError('Failed to save changes: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterCollectionItems = (items) => {
+    if (!searchQuery) return items;
+    
+    return items.filter(item => {
+      const game = games.find(g => g.id === item.gameId);
+      const console = consoles.find(c => c.id === item.consoleId);
+      const searchString = `${game?.title || ''} ${console?.name || ''}`.toLowerCase();
+      return searchString.includes(searchQuery.toLowerCase());
+    });
+  };
+
   const renderCollectionItems = () => {
+    const filteredItems = filterCollectionItems(collection);
+    
     if (viewType === 'card') {
       return (
         <div className="collection-cards-grid">
-          {collection.map(item => (
-            <CollectionCard
-              key={item.id}
-              item={item}
-              onDelete={handleDeleteCollectionItem}
-              loading={loading}
-            />
-          ))}
+          {filteredItems.map(item => {
+            const game = games.find(g => g.id === item.gameId);
+            const console = consoles.find(c => c.id === item.consoleId);
+            
+            return (
+              <CollectionCard
+                key={item.id}
+                item={{
+                  ...item,
+                  gameDetails: {
+                    title: game?.title || 'Unknown Game',
+                    consoleName: console?.name || 'Unknown Console',
+                    coverUrl: game?.coverUrl,
+                    pricechartingId: game?.pricechartingId,
+                    pricechartingUrl: game?.pricechartingUrl,
+                    displayName: `${console?.name || 'Unknown Console'} <span class="text-muted mx-2">/</span> ${game?.title || 'Unknown Game'}`
+                  }
+                }}
+                onDelete={handleDeleteCollectionItem}
+                onEdit={handleEdit}
+                loading={loading}
+              />
+            );
+          })}
         </div>
       );
     }
 
     return (
       <Table 
-        data={collection}
+        data={filteredItems}
         columns={[
-          { header: 'Game', key: 'title' },
-          { header: 'Console', key: 'console', render: (game) => consoles.find(c => c.id === game.consoleId)?.name },
-          { header: 'Added On', key: 'addedDate', render: (game) => new Date(game.addedDate).toLocaleDateString() },
-          { header: 'CIB Price', key: 'cibPrice', render: (game) => game.cibPrice !== null ? `$${game.cibPrice}` : 'N/A' },
-          { header: 'Final Price', key: 'finalPrice', render: (game) => game.price_override || game.cibPrice || 'N/A' },
-          { header: 'Actions', key: 'actions', render: (game) => (
-            <button 
-              className="btn btn-sm btn-outline-danger"
-              onClick={() => handleDeleteCollectionItem(game.id)}
-              disabled={loading}
-            >
-              Delete
-            </button>
-          )}
+          { 
+            header: 'Game', 
+            key: 'title',
+            render: (item) => {
+              const game = games.find(g => g.id === item.gameId);
+              const console = consoles.find(c => c.id === item.consoleId);
+              return `${console?.name || 'Unknown Console'} / ${game?.title || 'Unknown Game'}`;
+            }
+          },
+          { 
+            header: 'Added On', 
+            key: 'addedDate', 
+            render: (item) => new Date(item.addedDate).toLocaleDateString() 
+          },
+          { 
+            header: 'CIB Price', 
+            key: 'cibPrice', 
+            render: (item) => item.cibPrice !== null ? `$${item.cibPrice}` : '-' 
+          },
+          { 
+            header: 'Final Price', 
+            key: 'finalPrice', 
+            render: (item) => item.price_override ? `$${item.price_override} (Override)` : item.cibPrice ? `$${item.cibPrice} (CIB)` : '-'
+          },
+          { 
+            header: 'Actions', 
+            key: 'actions',
+            width: '100px',
+            render: (item) => (
+              <div className="d-flex gap-2">
+                <button 
+                  className="btn btn-sm btn-outline-primary"
+                  onClick={() => handleEdit(item)}
+                  disabled={loading}
+                >
+                  <Edit2 size={14} />
+                </button>
+                <button 
+                  className="btn btn-sm btn-outline-danger"
+                  onClick={() => handleDeleteCollectionItem(item.id)}
+                  disabled={loading}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            )
+          }
         ]}
       />
     );
   };
 
+  const getGameOptions = () => {
+    return games.map(game => {
+      const console = consoles.find(c => c.id === game.consoleId);
+      return {
+        value: game.id,
+        label: `${game.title} (${console?.name || 'Unknown Console'})`,
+        game: game
+      };
+    }).sort((a, b) => a.label.localeCompare(b.label));
+  };
+
+  const handleQuickAdd = async () => {
+    if (!selectedGame) return;
+    
+    try {
+      setLoading(true);
+      
+      const collectionItem = {
+        gameId: selectedGame.value,
+        consoleId: selectedGame.game.consoleId,
+        regionId: selectedGame.game.regionId,
+        addedDate: new Date().toISOString(),
+        boxCondition: '3',
+        discCondition: '3',
+        manualCondition: '3',
+        price_override: null
+      };
+
+      await collectionDB.addCollectionItem(collectionItem);
+      setSelectedGame(null);
+      loadData();
+      setSuccess('Game added to collection successfully');
+    } catch (error) {
+      setError('Failed to add game to collection: ' + error.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="content-wrapper">
       <Sidebar />
-      <div className="content-header">
-        <div className="d-flex align-items-center">
-          <Library size={24} className="me-3" style={{ position: 'relative', top: '-1px' }} />
-          <div>
-            <h2>My Game Collection</h2>
-            <p className="text-muted">Manage your personal game collection</p>
-          </div>
-        </div>
-      </div>
-
-      {error && (
-        <div className="alert alert-danger alert-dismissible fade show" role="alert">
-          {error}
-          <button type="button" className="close" onClick={() => setError('')}>
-            <span>&times;</span>
-          </button>
-        </div>
-      )}
-
       <div className="content-body">
-        <div className="d-flex justify-content-end mb-3">
-          <button 
-            className="btn btn-outline-secondary me-2"
-            onClick={() => handleViewChange('card')}
-          >
-            <Grid size={16} className="me-2" style={{ position: 'relative', top: '-1px' }} /> Card View
-          </button>
-          <button 
-            className="btn btn-outline-secondary"
-            onClick={() => handleViewChange('table')}
-          >
-            <List size={16} className="me-2" style={{ position: 'relative', top: '-1px' }} /> Table View
-          </button>
-        </div>
-
         <div className="card mb-4">
           <div className="card-header">
             <div className="d-flex align-items-center">
-              <Plus size={20} className="me-3" style={{ position: 'relative', top: '-1px' }} />
-              <h3 className="mb-0">Add Game to Collection</h3>
+              <Plus size={20} className="me-2" />
+              <h3 className="mb-0">Add Game To Collection</h3>
             </div>
           </div>
           <div className="card-body">
-            <form onSubmit={handleAddToCollection} className="row g-3">
-              <div className="col-md-6">
-                <div className="form-group">
-                  <label htmlFor="gameId">Select Game</label>
-                  <select 
-                    id="gameId"
-                    name="gameId" 
-                    className="form-control" 
-                    required
-                  >
-                    <option value="">Select Game</option>
-                    {games.map(game => (
-                      <option key={game.id} value={game.id}>
-                        {game.title} ({consoles.find(c => c.id === game.consoleId)?.name})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+            <div className="row align-items-end">
+              <div className="col">
+                <Select
+                  value={selectedGame}
+                  onChange={setSelectedGame}
+                  options={games
+                    .filter(game => !collection.some(item => item.gameId === game.id))
+                    .map(game => ({
+                      value: game.id,
+                      label: game.title,  // Just use the title as the label
+                      sublabel: consoles.find(c => c.id === game.consoleId)?.name || 'Unknown Console',
+                      game: game
+                    }))
+                    .sort((a, b) => a.label.localeCompare(b.label))}
+                  isSearchable={true}
+                  isClearable={true}
+                  placeholder="Search for a game..."
+                  className="game-select"
+                  classNamePrefix="game-select"
+                  formatOptionLabel={option => (
+                    <div>
+                      {option.label} <span className="text-muted">({option.sublabel})</span>
+                    </div>
+                  )}
+                  filterOption={(option, inputValue) => {
+                    if (!inputValue) return true;
+                    const searchTerm = inputValue.toLowerCase();
+                    return option.label.toLowerCase().includes(searchTerm);
+                  }}
+                  noOptionsMessage={({ inputValue }) => 
+                    inputValue ? "No games found" : "Type to search games"
+                  }
+                />
               </div>
-              <div className="col-md-4">
-                <div className="form-group">
-                  <label htmlFor="bmdCondition">BMD</label>
-                  <div style={{ display: 'flex', gap: '5px' }}>
-                    <Select 
-                      id="boxCondition" 
-                      name="boxCondition" 
-                      options={[1, 2, 3, 4, 5].map(value => ({
-                        value,
-                        label: value,
-                        color: value === 1 ? 'red' : value === 5 ? 'green' : '#d4edda'
-                      }))}
-                      onChange={(option) => handleConditionChange(item, 'boxCondition', option.value)}
-                      styles={{
-                        control: (provided) => ({
-                          ...provided,
-                          width: '60px',
-                          backgroundColor: '#d4edda',
-                        }),
-                        option: (provided, state) => ({
-                          ...provided,
-                          backgroundColor: state.isSelected ? '#d4edda' : state.isFocused ? '#f0f0f0' : '#fff',
-                          color: state.data.color,
-                        }),
-                      }}
-                      defaultValue={{ value: 3, label: '3', color: '#d4edda' }}
-                    />
-                    <Select 
-                      id="manualCondition" 
-                      name="manualCondition" 
-                      options={[1, 2, 3, 4, 5].map(value => ({
-                        value,
-                        label: value,
-                        color: value === 1 ? 'red' : value === 5 ? 'green' : '#d4edda'
-                      }))}
-                      onChange={(option) => handleConditionChange(item, 'manualCondition', option.value)}
-                      styles={{
-                        control: (provided) => ({
-                          ...provided,
-                          width: '60px',
-                          backgroundColor: '#d4edda',
-                        }),
-                        option: (provided, state) => ({
-                          ...provided,
-                          backgroundColor: state.isSelected ? '#d4edda' : state.isFocused ? '#f0f0f0' : '#fff',
-                          color: state.data.color,
-                        }),
-                      }}
-                      defaultValue={{ value: 3, label: '3', color: '#d4edda' }}
-                    />
-                    <Select 
-                      id="discCondition" 
-                      name="discCondition" 
-                      options={[1, 2, 3, 4, 5].map(value => ({
-                        value,
-                        label: value,
-                        color: value === 1 ? 'red' : value === 5 ? 'green' : '#d4edda'
-                      }))}
-                      onChange={(option) => handleConditionChange(item, 'discCondition', option.value)}
-                      styles={{
-                        control: (provided) => ({
-                          ...provided,
-                          width: '60px',
-                          backgroundColor: '#d4edda',
-                        }),
-                        option: (provided, state) => ({
-                          ...provided,
-                          backgroundColor: state.isSelected ? '#d4edda' : state.isFocused ? '#f0f0f0' : '#fff',
-                          color: state.data.color,
-                        }),
-                      }}
-                      defaultValue={{ value: 3, label: '3', color: '#d4edda' }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="col-12">
+              <div className="col-auto">
                 <button 
-                  type="submit" 
-                  className="btn btn-primary"
-                  disabled={loading}
+                  className="btn btn-primary" 
+                  onClick={handleQuickAdd}
+                  disabled={!selectedGame || loading}
                 >
-                  {loading ? 'Adding...' : 'Add to Collection'}
+                  {loading ? 'Adding...' : 'Quick Add'}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
         </div>
 
         <div className="card">
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <div className="d-flex align-items-center">
-              <Database size={20} className="me-3" style={{ position: 'relative', top: '-1px' }} />
-              <h3 className="mb-0">Collection Items</h3>
+          <div className="card-header">
+            <div className="d-flex justify-content-between align-items-center">
+              <div className="d-flex align-items-center">
+                <Database size={20} className="pe-2" />
+                <h3 className="mb-0">Collection Items ({collection.length} Item{collection.length !== 1 ? 's' : ''})</h3>
+              </div>
+              <div className="d-flex align-items-center gap-3">
+                <div className="search-box">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search collection..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <button 
+                    className={`btn ${viewType === 'card' ? 'btn-primary' : 'btn-outline-secondary'} me-2`}
+                    onClick={() => handleViewChange('card')}
+                  >
+                    <Grid size={16} className="me-2" style={{ position: 'relative', top: '-1px' }} /> Card View
+                  </button>
+                  <button 
+                    className={`btn ${viewType === 'table' ? 'btn-primary' : 'btn-outline-secondary'}`}
+                    onClick={() => handleViewChange('table')}
+                  >
+                    <List size={16} className="me-2" style={{ position: 'relative', top: '-1px' }} /> Table View
+                  </button>
+                </div>
+              </div>
             </div>
-            <span className="badge badge-info">{collection.length} Items</span>
           </div>
           <div className="card-body">
             {renderCollectionItems()}
           </div>
         </div>
       </div>
+
+      {showAddModal && (
+        <AddGameModal
+          onClose={() => setShowAddModal(false)}
+          onAdd={handleAddToCollection}
+          games={games}
+          consoles={consoles}
+          loading={loading}
+        />
+      )}
+
+      {editingGame && (
+        <EditGameModal
+          game={editingGame}
+          onClose={() => setEditingGame(null)}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
 };

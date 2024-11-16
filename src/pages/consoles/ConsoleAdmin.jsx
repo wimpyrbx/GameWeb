@@ -98,11 +98,6 @@ const ConsoleAdmin = () => {
 
   return (
     <div className="content-wrapper">
-      <div className="content-header">
-        <h2>Console Management</h2>
-        <p className="text-muted">Manage your console list</p>
-      </div>
-
       {error && (
         <div className="alert alert-danger alert-dismissible fade show" role="alert">
           {error}

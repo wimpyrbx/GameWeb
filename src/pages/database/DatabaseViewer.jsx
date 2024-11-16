@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { openDB } from 'idb';
+import { Database, Table as TableIcon } from 'lucide-react';
+
+const truncateText = (text, maxLength = 30) => {
+  if (!text) return '';
+  return text.length > maxLength ? text.substring(0, maxLength) + '...' : text;
+};
 
 const DatabaseViewer = () => {
   const [tables, setTables] = useState([]);
@@ -9,6 +14,57 @@ const DatabaseViewer = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  // Table schemas with updated names
+  const tableSchemas = {
+    gamesdatabase: `CREATE TABLE gamesdatabase (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      title TEXT NOT NULL,
+      consoleId INTEGER,
+      regionId INTEGER,
+      rating TEXT,
+      pricechartingId TEXT,
+      pricechartingUrl TEXT,
+      coverUrl TEXT,
+      developer TEXT,
+      publisher TEXT,
+      releaseDate TEXT,
+      genre TEXT
+    )`,
+    consoles: `CREATE TABLE consoles (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE
+    )`,
+    regions: `CREATE TABLE regions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL UNIQUE
+    )`,
+    prices: `CREATE TABLE prices (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      pricechartingId TEXT,
+      loose REAL,
+      cib REAL,
+      new REAL,
+      box REAL,
+      manual REAL,
+      date TEXT
+    )`,
+    collection: `CREATE TABLE collection (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      gameId INTEGER,
+      consoleId INTEGER,
+      regionId INTEGER,
+      addedDate TEXT,
+      boxCondition TEXT,
+      discCondition TEXT,
+      manualCondition TEXT,
+      price_override REAL
+    )`,
+    settings: `CREATE TABLE settings (
+      key TEXT PRIMARY KEY,
+      value TEXT
+    )`
+  };
+
   useEffect(() => {
     loadTables();
   }, []);
@@ -16,10 +72,9 @@ const DatabaseViewer = () => {
   const loadTables = async () => {
     try {
       setLoading(true);
-      const db = await openDB('gameCollectionDB');
-      setTables(Array.from(db.objectStoreNames));
-      if (db.objectStoreNames.length > 0) {
-        setSelectedTable(db.objectStoreNames[0]);
+      setTables(Object.keys(tableSchemas));
+      if (Object.keys(tableSchemas).length > 0) {
+        setSelectedTable(Object.keys(tableSchemas)[0]);
       }
     } catch (error) {
       setError('Failed to load tables: ' + error.message);
@@ -28,73 +83,29 @@ const DatabaseViewer = () => {
     }
   };
 
-  const loadTableSchema = async (tableName) => {
-    try {
-      const db = await openDB('gameCollectionDB');
-      const tx = db.transaction(tableName, 'readonly');
-      const store = tx.objectStore(tableName);
-      
-      const schema = {
-        name: tableName,
-        keyPath: store.keyPath,
-        autoIncrement: store.autoIncrement,
-        indexes: []
-      };
-
-      // Get indexes
-      for (const indexName of store.indexNames) {
-        const index = store.index(indexName);
-        schema.indexes.push({
-          name: indexName,
-          keyPath: index.keyPath,
-          multiEntry: index.multiEntry,
-          unique: index.unique
-        });
-      }
-
-      setSchema(schema);
-    } catch (error) {
-      setError('Failed to load schema: ' + error.message);
-    }
-  };
-
   const loadTableData = async (tableName) => {
     try {
       setLoading(true);
-      const db = await openDB('gameCollectionDB');
-      let allData = await db.getAll(tableName);
-      
-      // Only show latest 100 entries
-      allData = allData.slice(-100);
-      setData(allData);
+      const response = await fetch(`http://localhost:3001/api/${tableName}`);
+      if (!response.ok) throw new Error('Failed to fetch table data');
+      const data = await response.json();
+      setData(data.slice(0, 50)); // Get last 50 entries
+      setSchema(tableSchemas[tableName]);
     } catch (error) {
-      setError('Failed to load data: ' + error.message);
+      setError('Failed to load table data: ' + error.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleTableChange = async (e) => {
-    const tableName = e.target.value;
-    setSelectedTable(tableName);
-    await loadTableSchema(tableName);
-    await loadTableData(tableName);
-  };
-
   useEffect(() => {
     if (selectedTable) {
-      loadTableSchema(selectedTable);
       loadTableData(selectedTable);
     }
   }, [selectedTable]);
 
   return (
     <div className="content-wrapper">
-      <div className="content-header">
-        <h2>Database Viewer</h2>
-        <p className="text-muted">View database tables and their contents</p>
-      </div>
-
       {error && (
         <div className="alert alert-danger alert-dismissible fade show" role="alert">
           {error}
@@ -105,102 +116,92 @@ const DatabaseViewer = () => {
       )}
 
       <div className="content-body">
-        <div className="card mb-4">
-          <div className="card-header">
-            <h3>Select Table</h3>
+        <div className="row mb-4">
+          <div className="col-md-3">
+            <div className="card h-100">
+              <div className="card-header">
+                <h3 className="card-title">Tables</h3>
+              </div>
+              <div className="card-body p-0">
+                <div className="list-group list-group-flush">
+                  {tables.map(table => (
+                    <button
+                      key={table}
+                      className={`list-group-item list-group-item-action d-flex align-items-center ${selectedTable === table ? 'active' : ''}`}
+                      onClick={() => setSelectedTable(table)}
+                    >
+                      <TableIcon size={16} className="me-3" />
+                      {table}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="card-body">
-            <select 
-              className="form-control"
-              value={selectedTable}
-              onChange={handleTableChange}
-              disabled={loading}
-            >
-              {tables.map(table => (
-                <option key={table} value={table}>
-                  {table}
-                </option>
-              ))}
-            </select>
+
+          <div className="col-md-9">
+            {selectedTable && (
+              <div className="card h-100">
+                <div className="card-header">
+                  <h3 className="card-title">Table Schema: {selectedTable}</h3>
+                </div>
+                <div className="card-body">
+                  <div className="schema-container">
+                    <pre className="bg-light">
+                      <code>{schema}</code>
+                    </pre>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {schema && (
-          <div className="card mb-4">
-            <div className="card-header">
-              <h3>Table Schema: {schema.name}</h3>
-            </div>
-            <div className="card-body">
-              <table className="table table-sm">
-                <tbody>
-                  <tr>
-                    <th>Key Path:</th>
-                    <td>{schema.keyPath}</td>
-                  </tr>
-                  <tr>
-                    <th>Auto Increment:</th>
-                    <td>{schema.autoIncrement ? 'Yes' : 'No'}</td>
-                  </tr>
-                </tbody>
-              </table>
-
-              <h4 className="mt-4">Indexes</h4>
-              <table className="table table-striped">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Key Path</th>
-                    <th>Multi Entry</th>
-                    <th>Unique</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {schema.indexes.map(index => (
-                    <tr key={index.name}>
-                      <td>{index.name}</td>
-                      <td>{Array.isArray(index.keyPath) ? index.keyPath.join(', ') : index.keyPath}</td>
-                      <td>{index.multiEntry ? 'Yes' : 'No'}</td>
-                      <td>{index.unique ? 'Yes' : 'No'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {data.length > 0 && (
-          <div className="card">
-            <div className="card-header d-flex justify-content-between align-items-center">
-              <h3>Table Data</h3>
-              <span className="badge badge-info">
-                Showing {data.length} {data.length === 100 ? '(Limited)' : ''} entries
-              </span>
-            </div>
-            <div className="card-body">
-              <div className="table-responsive">
-                <table className="table table-striped">
-                  <thead>
-                    <tr>
-                      {Object.keys(data[0]).map(key => (
-                        <th key={key}>{key}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.map((row, index) => (
-                      <tr key={index}>
-                        {Object.values(row).map((value, i) => (
-                          <td key={i}>
-                            {typeof value === 'object' ? 
-                              JSON.stringify(value) : 
-                              String(value)}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+        {selectedTable && (
+          <div className="row">
+            <div className="col-12">
+              <div className="card">
+                <div className="card-header d-flex justify-content-between align-items-center">
+                  <h3 className="card-title">Table Data: {selectedTable}</h3>
+                  <span className="badge bg-info text-white">
+                    Showing {data.length} entries
+                  </span>
+                </div>
+                <div className="card-body table-card-body">
+                  <div className="table-container">
+                    {loading ? (
+                      <div className="text-center p-4">Loading...</div>
+                    ) : data.length === 0 ? (
+                      <div className="text-center p-4">No data available</div>
+                    ) : (
+                      <div className="table-responsive">
+                        <table className="table table-striped">
+                          <thead>
+                            <tr>
+                              {Object.keys(data[0]).map(key => (
+                                <th key={key}>{key}</th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.map((row, index) => (
+                              <tr key={index}>
+                                {Object.values(row).map((value, i) => (
+                                  <td key={i} title={typeof value === 'object' ? JSON.stringify(value) : String(value)}>
+                                    {typeof value === 'object' 
+                                      ? truncateText(JSON.stringify(value))
+                                      : truncateText(String(value))
+                                    }
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           </div>

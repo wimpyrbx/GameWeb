@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Database, Gamepad2, Settings, Globe, Trash2 } from 'lucide-react';
-import { deleteDB } from 'idb';
+import { Home, Database, Gamepad2, Globe, Trash2 } from 'lucide-react';
 
 const Sidebar = ({ onClose }) => {
   const location = useLocation();
@@ -19,10 +18,13 @@ const Sidebar = ({ onClose }) => {
   };
 
   const handleClearDatabase = async () => {
-    if (window.confirm('Are you sure you want to clear the database? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to clear all database tables? This action cannot be undone.')) {
       try {
-        await deleteDB('gameCollectionDB');
-        window.location.reload(); // Reload the page to reinitialize the database
+        const response = await fetch('http://localhost:3001/api/clear-database', {
+          method: 'POST'
+        });
+        if (!response.ok) throw new Error('Failed to clear database');
+        window.location.reload();
       } catch (error) {
         console.error('Error clearing database:', error);
         alert('Failed to clear database: ' + error.message);
@@ -39,25 +41,26 @@ const Sidebar = ({ onClose }) => {
         <div className="nav-section">
           {menuItems.map((item) => {
             const Icon = item.icon;
+            const isActive = location.pathname === item.path;
             return (
               <Link 
                 key={item.path}
                 to={item.path} 
-                className={`nav-link ${location.pathname === item.path ? 'active' : ''}`}
+                className={`nav-link ${isActive ? 'active' : ''}`}
                 onClick={handleClick}
               >
-                <Icon size={18} />
+                <Icon 
+                  size={18} 
+                  className={`me-2 ${isActive ? 'icon-active' : ''}`}
+                  style={{ marginRight: '12px' }}
+                />
                 {item.label}
               </Link>
             );
           })}
         </div>
       </nav>
-      <div className="sidebar-footer" style={{ 
-        padding: '20px',
-        borderTop: '1px solid rgba(255,255,255,0.1)',
-        marginTop: 'auto'
-      }}>
+      <div className="sidebar-footer">
         <button 
           className="btn btn-danger w-100 d-flex align-items-center justify-content-center"
           onClick={handleClearDatabase}

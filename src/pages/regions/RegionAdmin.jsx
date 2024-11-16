@@ -102,11 +102,6 @@ const RegionAdmin = () => {
 
   return (
     <div className="content-wrapper">
-      <div className="content-header">
-        <h2>Region Management</h2>
-        <p className="text-muted">Manage your region list</p>
-      </div>
-
       {error && (
         <div className="alert alert-danger alert-dismissible fade show" role="alert">
           {error}

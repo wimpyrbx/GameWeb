@@ -32,24 +32,28 @@ const CollectionCard = ({
         <div className="d-flex justify-content-between align-items-start">
           <div>
             <h4 className="collection-card-title">
-              <span dangerouslySetInnerHTML={{ __html: item.gameDetails.displayName }} />
+              {item.gameDetails.title}
             </h4>
           </div>
           <div className="d-flex gap-2">
-            <button 
-              className="btn btn-sm btn-outline-primary" 
+            <Edit2 
+              size={14} 
+              className="text-primary cursor-pointer" 
               onClick={() => onEdit(item)}
-              title="Edit Game"
-            >
-              <Edit2 size={14} />
-            </button>
-            <button 
-              className="btn btn-sm btn-outline-danger" 
+              style={{ 
+                opacity: loading ? 0.5 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            />
+            <Trash2 
+              size={14} 
+              className="text-danger cursor-pointer" 
               onClick={() => onDelete(item.id)}
-              title="Delete Game"
-            >
-              <Trash2 size={14} />
-            </button>
+              style={{ 
+                opacity: loading ? 0.5 : 1,
+                cursor: loading ? 'not-allowed' : 'pointer'
+              }}
+            />
           </div>
         </div>
         <div className="mt-2 text-muted small">
@@ -73,7 +77,7 @@ const CollectionCard = ({
           )}
         </div>
 
-        <div className="collection-card-info">
+        <div className="collection-card-info p-0">
           <div className="collection-card-conditions">
             <div className="condition-item">
               <BoxIcon size={16} className="me-1" />

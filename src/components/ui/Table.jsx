@@ -18,18 +18,27 @@ const Table = ({ columns, data }) => (
       <thead>
         <tr>
           {columns.map((column, index) => (
-            <th key={index}>{column}</th>
+            <th key={index}>{column.header}</th>
           ))}
         </tr>
       </thead>
       <tbody>
-        {data.map((row, index) => (
-          <tr key={index}>
-            {Object.values(row).map((cell, cellIndex) => (
-              <td key={cellIndex}>{cell}</td>
+        {data.map((row, rowIndex) => (
+          <tr key={rowIndex}>
+            {columns.map((column, colIndex) => (
+              <td key={colIndex}>
+                {column.render ? column.render(row) : row[column.key]}
+              </td>
             ))}
           </tr>
         ))}
+        {data.length === 0 && (
+          <tr>
+            <td colSpan={columns.length} className="text-center">
+              No data available
+            </td>
+          </tr>
+        )}
       </tbody>
     </table>
   </div>

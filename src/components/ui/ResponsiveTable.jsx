@@ -5,9 +5,10 @@ const ResponsiveTable = ({
   columns, 
   data, 
   isMobile,
-  mobileColumns = ['title', 'console'], // Default mobile columns
+  mobileColumns = ['title', 'console'],
   onRowClick,
-  emptyMessage = 'No data available'
+  emptyMessage = 'No data available',
+  style = {}
 }) => {
   if (isMobile) {
     return (
@@ -39,11 +40,24 @@ const ResponsiveTable = ({
 
   return (
     <div className="table-responsive">
-      <table className="table table-striped">
+      <table className="table table-striped" style={style}>
         <thead>
           <tr>
             {columns.map((column, index) => (
-              <th key={index}>{column.header}</th>
+              <th 
+                key={index}
+                style={{
+                  width: column.width || 'auto',
+                  padding: column.padding || '0.75rem',
+                  maxWidth: column.width || 'none',
+                  minWidth: column.width || 'auto',
+                  whiteSpace: 'nowrap',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis'
+                }}
+              >
+                {column.header}
+              </th>
             ))}
           </tr>
         </thead>
@@ -58,7 +72,19 @@ const ResponsiveTable = ({
             data.map((item, index) => (
               <tr key={item.id || index}>
                 {columns.map((column, colIndex) => (
-                  <td key={colIndex}>
+                  <td 
+                    key={colIndex}
+                    style={{
+                      width: column.width || 'auto',
+                      padding: column.padding || '0.75rem',
+                      maxWidth: column.width || 'none',
+                      minWidth: column.width || 'auto',
+                      whiteSpace: 'nowrap',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis'
+                    }}
+                    className={column.className}
+                  >
                     {column.render ? column.render(item) : item[column.key]}
                   </td>
                 ))}
