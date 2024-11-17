@@ -189,5 +189,36 @@ export const api = {
       throw new Error(error.error || 'Failed to clear database');
     }
     return await response.json();
+  },
+
+  // Update the executeSQL method
+  executeSQL: async (query) => {
+    try {
+      const response = await fetch(`${API_URL}/execute-sql`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query })
+      });
+
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error('Server returned an invalid response format');
+      }
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.message || 'Failed to execute query');
+      }
+
+      return data;
+    } catch (error) {
+      if (error.message === 'Server returned an invalid response format') {
+        throw new Error('Server error: The server returned an invalid response');
+      }
+      throw error;
+    }
   }
 }; 

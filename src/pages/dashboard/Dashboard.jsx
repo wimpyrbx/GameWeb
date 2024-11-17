@@ -42,11 +42,18 @@ const Dashboard = () => {
     isAdd: false
   });
   const [success, setSuccess] = useState('');
+  const [itemsPerPage, setItemsPerPage] = useState(10); // New state for items per page
+  const [currentPage, setCurrentPage] = useState(1); // New state for current page
 
   useEffect(() => {
     const loadViewType = async () => {
-      const savedViewType = await getSetting('collectionViewType') || 'card';
-      setViewType(savedViewType);
+      const [savedViewType, savedPageSize] = await Promise.all([
+        getSetting('collectionViewType'),
+        getSetting('collectionPageSize')
+      ]);
+      
+      setViewType(savedViewType || 'card');
+      setItemsPerPage(savedPageSize ? parseInt(savedPageSize) : 10);
       loadData();
     };
     loadViewType();
@@ -124,7 +131,9 @@ const Dashboard = () => {
 
   const handleViewChange = async (type) => {
     setViewType(type);
-    await saveSetting('collectionViewType', type); // Save the selected view type
+    setItemsPerPage(10);
+    setCurrentPage(1);
+    await saveSetting('collectionViewType', type);
   };
 
   const handleConditionChange = (field, value) => {
@@ -206,90 +215,168 @@ const Dashboard = () => {
   const renderCollectionItems = () => {
     const filteredItems = filterCollectionItems(collection);
     
+    // Calculate pagination
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    const paginatedItems = filteredItems.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(filteredItems.length / itemsPerPage);
+    
     if (viewType === 'card') {
       return (
-        <div className="collection-cards-grid">
-          {filteredItems.map(item => {
-            const game = games.find(g => g.id === item.gameId);
-            const console = consoles.find(c => c.id === item.consoleId);
-            
-            return (
-              <CollectionCard
-                key={item.id}
-                item={{
-                  ...item,
-                  gameDetails: {
-                    title: game?.title || 'Unknown Game',
-                    consoleName: console?.name || 'Unknown Console',
-                    coverUrl: game?.coverUrl,
-                    pricechartingId: game?.pricechartingId,
-                    pricechartingUrl: game?.pricechartingUrl,
-                    displayName: `${console?.name || 'Unknown Console'} <span class="text-muted mx-2">/</span> ${game?.title || 'Unknown Game'}`
-                  }
-                }}
-                onDelete={handleDeleteCollectionItem}
-                onEdit={handleEdit}
-                loading={loading}
-              />
-            );
-          })}
-        </div>
+        <>
+          <div className="collection-cards-grid">
+            {paginatedItems.map(item => {
+              const game = games.find(g => g.id === item.gameId);
+              const console = consoles.find(c => c.id === item.consoleId);
+              
+              return (
+                <CollectionCard
+                  key={item.id}
+                  item={{
+                    ...item,
+                    gameDetails: {
+                      title: game?.title || 'Unknown Game',
+                      consoleName: console?.name || 'Unknown Console',
+                      coverUrl: game?.coverUrl,
+                      pricechartingId: game?.pricechartingId,
+                      pricechartingUrl: game?.pricechartingUrl,
+                      displayName: `${console?.name || 'Unknown Console'} <span class="text-muted mx-2">/</span> ${game?.title || 'Unknown Game'}`
+                    }
+                  }}
+                  onDelete={handleDeleteCollectionItem}
+                  onEdit={handleEdit}
+                  loading={loading}
+                />
+              );
+            })}
+          </div>
+          <div className="d-flex justify-content-end align-items-center mt-4">
+            <nav aria-label="Collection pagination">
+              <ul className="pagination mb-0">
+                <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
+                  <button 
+                    className="page-link" 
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Previous
+                  </button>
+                </li>
+                {[...Array(totalPages)].map((_, i) => (
+                  <li key={i + 1} className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}>
+                    <button 
+                      className="page-link" 
+                      onClick={() => setCurrentPage(i + 1)}
+                    >
+                      {i + 1}
+                    </button>
+                  </li>
+                ))}
+                <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
+                  <button 
+                    className="page-link" 
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                  </button>
+                </li>
+              </ul>
+            </nav>
+          </div>
+        </>
       );
     }
 
     return (
-      <Table 
-        data={filteredItems}
-        columns={[
-          { 
-            header: 'Game', 
-            key: 'title',
-            render: (item) => {
-              const game = games.find(g => g.id === item.gameId);
-              const console = consoles.find(c => c.id === item.consoleId);
-              return `${console?.name || 'Unknown Console'} / ${game?.title || 'Unknown Game'}`;
+      <>
+        <Table 
+          data={paginatedItems}
+          columns={[
+            { 
+              header: 'Game', 
+              key: 'title',
+              render: (item) => {
+                const game = games.find(g => g.id === item.gameId);
+                const console = consoles.find(c => c.id === item.consoleId);
+                return `${console?.name || 'Unknown Console'} / ${game?.title || 'Unknown Game'}`;
+              }
+            },
+            { 
+              header: 'Added On', 
+              key: 'addedDate', 
+              render: (item) => new Date(item.addedDate).toLocaleDateString() 
+            },
+            { 
+              header: 'CIB Price', 
+              key: 'cibPrice', 
+              render: (item) => item.cibPrice !== null ? `$${item.cibPrice}` : '-' 
+            },
+            { 
+              header: 'Final Price', 
+              key: 'finalPrice', 
+              render: (item) => item.price_override ? `$${item.price_override} (Override)` : item.cibPrice ? `$${item.cibPrice} (CIB)` : '-'
+            },
+            { 
+              header: 'Actions', 
+              key: 'actions',
+              width: '100px',
+              render: (item) => (
+                <div className="d-flex gap-2">
+                  <button 
+                    className="btn btn-sm btn-outline-primary"
+                    onClick={() => handleEdit(item)}
+                    disabled={loading}
+                  >
+                    <Edit2 size={14} />
+                  </button>
+                  <button 
+                    className="btn btn-sm btn-outline-danger"
+                    onClick={() => handleDeleteCollectionItem(item.id)}
+                    disabled={loading}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              )
             }
-          },
-          { 
-            header: 'Added On', 
-            key: 'addedDate', 
-            render: (item) => new Date(item.addedDate).toLocaleDateString() 
-          },
-          { 
-            header: 'CIB Price', 
-            key: 'cibPrice', 
-            render: (item) => item.cibPrice !== null ? `$${item.cibPrice}` : '-' 
-          },
-          { 
-            header: 'Final Price', 
-            key: 'finalPrice', 
-            render: (item) => item.price_override ? `$${item.price_override} (Override)` : item.cibPrice ? `$${item.cibPrice} (CIB)` : '-'
-          },
-          { 
-            header: 'Actions', 
-            key: 'actions',
-            width: '100px',
-            render: (item) => (
-              <div className="d-flex gap-2">
+          ]}
+        />
+        <div className="d-flex justify-content-end align-items-center mt-4">
+          <nav aria-label="Collection pagination">
+            <ul className="pagination mb-0">
+              <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
                 <button 
-                  className="btn btn-sm btn-outline-primary"
-                  onClick={() => handleEdit(item)}
-                  disabled={loading}
+                  className="page-link" 
+                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                  disabled={currentPage === 1}
                 >
-                  <Edit2 size={14} />
+                  Previous
                 </button>
+              </li>
+              {[...Array(totalPages)].map((_, i) => (
+                <li key={i + 1} className={`page-item ${currentPage === i + 1 ? 'active' : ''}`}>
+                  <button 
+                    className="page-link" 
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+              <li className={`page-item ${currentPage === totalPages ? 'disabled' : ''}`}>
                 <button 
-                  className="btn btn-sm btn-outline-danger"
-                  onClick={() => handleDeleteCollectionItem(item.id)}
-                  disabled={loading}
+                  className="page-link" 
+                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={currentPage === totalPages}
                 >
-                  <Trash2 size={14} />
+                  Next
                 </button>
-              </div>
-            )
-          }
-        ]}
-      />
+              </li>
+            </ul>
+          </nav>
+        </div>
+      </>
     );
   };
 
@@ -375,40 +462,85 @@ const Dashboard = () => {
         </div>
 
         <div className="card">
-          <div className="card-header">
-            <div className="d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center">
-                <Database size={20} className="pe-2" />
-                <h3 className="mb-0">Collection Items ({collection.length} Item{collection.length !== 1 ? 's' : ''})</h3>
-              </div>
-              <div className="d-flex align-items-center gap-3">
-                <div className="search-box">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Search collection..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
-                </div>
-                <div>
-                  <button 
-                    className={`btn ${viewType === 'card' ? 'btn-primary' : 'btn-outline-secondary'} me-2`}
-                    onClick={() => handleViewChange('card')}
-                  >
-                    <Grid size={16} className="me-2" style={{ position: 'relative', top: '-1px' }} /> Card View
-                  </button>
-                  <button 
-                    className={`btn ${viewType === 'table' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                    onClick={() => handleViewChange('table')}
-                  >
-                    <List size={16} className="me-2" style={{ position: 'relative', top: '-1px' }} /> Table View
-                  </button>
-                </div>
+          <div className="card-header d-flex justify-content-between align-items-center">
+            <div className="d-flex align-items-center gap-3">
+              <h3>Collection Items ({
+                searchQuery 
+                  ? `${filterCollectionItems(collection).length} of ${collection.length} Items` 
+                  : `${collection.length} Items`
+              })</h3>
+            </div>
+            <div className="d-flex align-items-center gap-3">
+              <Select
+                value={{ value: itemsPerPage, label: `${itemsPerPage} items` }}
+                onChange={async (option) => {
+                  const value = Number(option.value);
+                  setItemsPerPage(value);
+                  setCurrentPage(1);
+                  try {
+                    await saveSetting('collectionPageSize', value.toString());
+                  } catch (error) {
+                    console.error('Error saving page size setting:', error);
+                  }
+                }}
+                options={[
+                  { value: 10, label: '10 items' },
+                  { value: 25, label: '25 items' },
+                  { value: 50, label: '50 items' }
+                ]}
+                className="items-per-page-select"
+                classNamePrefix="items-per-page"
+                isSearchable={false}
+                styles={{
+                  control: (base) => ({
+                    ...base,
+                    minHeight: '31px',
+                    height: '31px'
+                  }),
+                  valueContainer: (base) => ({
+                    ...base,
+                    height: '31px',
+                    padding: '0 8px'
+                  }),
+                  input: (base) => ({
+                    ...base,
+                    margin: '0px'
+                  }),
+                  indicatorSeparator: () => ({
+                    display: 'none'
+                  }),
+                  dropdownIndicator: (base) => ({
+                    ...base,
+                    padding: '4px'
+                  })
+                }}
+              />
+              <div className="btn-group">
+                <button 
+                  className={`btn btn-outline-secondary ${viewType === 'card' ? 'active' : ''}`}
+                  onClick={() => handleViewChange('card')}
+                >
+                  <Grid size={16} />
+                </button>
+                <button 
+                  className={`btn btn-outline-secondary ${viewType === 'table' ? 'active' : ''}`}
+                  onClick={() => handleViewChange('table')}
+                >
+                  <List size={16} />
+                </button>
               </div>
             </div>
           </div>
           <div className="card-body">
+            <div className="mb-3">
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="Search collection..." 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
             {renderCollectionItems()}
           </div>
         </div>

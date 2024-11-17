@@ -14,7 +14,8 @@ const Sidebar = ({ onClose }) => {
     { path: '/games', icon: Database, label: 'Games Database' },
     { path: '/consoles', icon: Gamepad2, label: 'Console Admin' },
     { path: '/regions', icon: Globe, label: 'Region Admin' },
-    { path: '/database', icon: Database, label: 'Database Viewer' }
+    { path: '/database', icon: Database, label: 'Database Viewer' },
+    { path: '/database/sql', icon: Database, label: 'Manual SQL' }
   ];
 
   useEffect(() => {

@@ -16,6 +16,7 @@ import collectionRoutes from './api/collection.js';
 import imagesRoutes from './api/images.js';
 import ratingsRoutes from './api/ratings.js';
 import databaseRoutes from './api/database.js';
+import manualSQLRouter from './api/manualSQL.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -40,6 +41,7 @@ app.use('/api', collectionRoutes);
 app.use('/api', imagesRoutes);
 app.use('/api', ratingsRoutes);
 app.use('/api', databaseRoutes);
+app.use('/api', manualSQLRouter);
 
 // Start the server
 app.listen(port, () => {

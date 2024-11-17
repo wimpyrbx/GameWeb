@@ -7,6 +7,7 @@ import Games from './pages/games/Games';
 import ConsoleAdmin from './pages/consoles/ConsoleAdmin';
 import RegionAdmin from './pages/regions/RegionAdmin';
 import DatabaseViewer from './pages/database/DatabaseViewer';
+import ManualSQL from './pages/database/ManualSQL';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
           <Route path="/consoles" element={<ConsoleAdmin />} />
           <Route path="/regions" element={<RegionAdmin />} />
           <Route path="/database" element={<DatabaseViewer />} />
+          <Route path="/database/sql" element={<ManualSQL />} />
         </Routes>
       </Layout>
     </Router>

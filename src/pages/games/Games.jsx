@@ -5,6 +5,7 @@ import RatingIcon from '../../components/ui/RatingIcon';
 import { Edit2, Trash2 } from 'lucide-react';
 import { Image } from 'lucide-react';
 import { api } from '../../services/api';
+import Select from 'react-select';
 
 const Games = () => {
   const [games, setGames] = useState([]);
@@ -15,13 +16,13 @@ const Games = () => {
   const [ratings, setRatings] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [gamesPerPage, setGamesPerPage] = useState(50);
+  const [gamesPerPage, setGamesPerPage] = useState(10);
   const itemsPerPageOptions = [10, 25, 50, 100];
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const response = await api.getSetting('games_database_show_per_page');
+        const response = await api.getSetting('gamesdatabasePageSize');
         if (response && response.value) {
           setGamesPerPage(parseInt(response.value));
           loadGames(1, parseInt(response.value));
@@ -126,10 +127,10 @@ const Games = () => {
   const handleItemsPerPageChange = async (newValue) => {
     const value = parseInt(newValue);
     setGamesPerPage(value);
-    setCurrentPage(1); // Reset to first page when changing items per page
+    setCurrentPage(1);
     
     try {
-      await api.saveSetting('games_database_show_per_page', value.toString());
+      await api.saveSetting('gamesdatabasePageSize', value.toString());
       loadGames(1, value);
     } catch (error) {
       console.error('Error saving setting:', error);
@@ -194,20 +195,45 @@ const Games = () => {
             <div className="card">
               <div className="card-header d-flex justify-content-between align-items-center">
                 <h3>Games Database ({games.length} Games)</h3>
-                <div className="d-flex align-items-center">
-                  <span className="me-2">Show</span>
-                  <select 
-                    className="form-select form-select-sm" 
-                    style={{ width: 'auto' }}
-                    value={gamesPerPage}
-                    onChange={(e) => handleItemsPerPageChange(e.target.value)}
-                  >
-                    {itemsPerPageOptions.map(option => (
-                      <option key={option} value={option}>{option}</option>
-                    ))}
-                  </select>
-                  <span className="ms-2">items</span>
-                </div>
+                <Select
+                  value={{ value: gamesPerPage, label: `${gamesPerPage} items` }}
+                  onChange={(option) => handleItemsPerPageChange(option.value)}
+                  options={[
+                    { value: 10, label: '10 items' },
+                    { value: 25, label: '25 items' },
+                    { value: 50, label: '50 items' }
+                  ]}
+                  className="items-per-page-select"
+                  classNamePrefix="items-per-page"
+                  isSearchable={false}
+                  styles={{
+                    control: (base) => ({
+                      ...base,
+                      minHeight: '31px',
+                      height: '31px'
+                    }),
+                    valueContainer: (base) => ({
+                      ...base,
+                      height: '31px',
+                      padding: '0 8px'
+                    }),
+                    input: (base) => ({
+                      ...base,
+                      margin: '0px'
+                    }),
+                    indicatorSeparator: () => ({
+                      display: 'none'
+                    }),
+                    dropdownIndicator: (base) => ({
+                      ...base,
+                      padding: '4px'
+                    }),
+                    menu: (base) => ({
+                      ...base,
+                      zIndex: 999
+                    })
+                  }}
+                />
               </div>
               <div className="card-body">
                 {loading ? (
@@ -274,10 +300,24 @@ const Games = () => {
                                 }}>
                                   {game.ratingId ? (
                                     <div style={{ height: '14px' }}>
-                                      <RatingIcon rating={getRatingInfo(game.ratingId)} />
+                                      {getRatingInfo(game.ratingId) ? (
+                                        <RatingIcon rating={getRatingInfo(game.ratingId)} />
+                                      ) : (
+                                        <span className="badge bg-dark text-white" style={{ 
+                                          fontSize: '11px',
+                                          borderRadius: '4px',
+                                          padding: '2px 6px'
+                                        }}>
+                                          {game.ratingId}
+                                        </span>
+                                      )}
                                     </div>
                                   ) : (
-                                    <span className="badge bg-secondary">
+                                    <span className="badge bg-dark text-white" style={{ 
+                                      fontSize: '11px',
+                                      borderRadius: '4px',
+                                      padding: '2px 6px'
+                                    }}>
                                       {game.regionId === 1 ? 'PAL' : 'NTSC'}
                                     </span>
                                   )}
