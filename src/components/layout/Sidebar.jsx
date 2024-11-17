@@ -122,14 +122,47 @@ const Sidebar = ({ onClose }) => {
             Updated: {formatLastUpdated(lastUpdated)}
           </div>
         </div>
-        <button 
-          className="btn btn-danger w-100 d-flex align-items-center justify-content-center mt-3"
-          onClick={handleClearDatabase}
-        >
-          <Trash2 size={16} className="me-2" />
-          Clear Database
-        </button>
+        <div className="clear-database-wrapper">
+          <button 
+            className="btn btn-danger d-inline-flex align-items-center"
+            onClick={handleClearDatabase}
+          >
+            <Trash2 size={16} className="me-2" />
+            Clear Database
+          </button>
+        </div>
       </div>
+
+      <style>
+        {`
+          .sidebar {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+          }
+          
+          .sidebar-nav {
+            flex: 1;
+          }
+
+          .sidebar-footer {
+            margin-top: auto;
+            padding: 1rem;
+          }
+
+          .clear-database-wrapper {
+            display: flex;
+            justify-content: center;
+            padding: 1.5rem 0;
+            margin-top: 1rem;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+          }
+
+          .clear-database-wrapper .btn {
+            padding: 0.5rem 1.5rem;
+          }
+        `}
+      </style>
     </div>
   );
 };

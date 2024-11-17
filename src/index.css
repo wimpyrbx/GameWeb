@@ -41,7 +41,7 @@ body {
   margin: 0;
   padding: 0;
   transition: transform 0.3s ease;
-  z-index: 1000;
+  z-index: 1040;
 }
 
 .sidebar-header {
@@ -843,6 +843,8 @@ body {
 /* Add these styles for the search box */
 .search-box {
   min-width: 250px;
+  z-index: 1000;
+  position: relative;
 }
 
 .search-box .form-control {
@@ -1460,4 +1462,24 @@ div[class*="game-select__menu"] {
 
 .spin {
   animation: spin 1s linear infinite;
+}
+
+/* Modal z-index handling */
+.modal-backdrop {
+  z-index: 1050 !important;
+}
+
+.modal {
+  z-index: 1055 !important;
+}
+
+/* Search box z-index */
+.search-box {
+  z-index: 1000;
+  position: relative;
+}
+
+/* Ensure sidebar stays above content but below modals */
+.sidebar {
+  z-index: 1040;
 }
