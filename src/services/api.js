@@ -220,5 +220,12 @@ export const api = {
       }
       throw error;
     }
-  }
+  },
+
+  // Fix the getRatingsByRegion method - it should be inside the api object
+  async getRatingsByRegion(regionId) {
+    const response = await fetch(`${API_URL}/ratings/region/${regionId}`);
+    if (!response.ok) throw new Error('Failed to fetch ratings');
+    return await response.json();
+  },
 }; 

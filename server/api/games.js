@@ -216,4 +216,58 @@ router.get('/prices/latest/:pricechartingId', (req, res) => {
   });
 });
 
+router.put('/gamesdatabase/:id', (req, res) => {
+  const { id } = req.params;
+  const {
+    title,
+    regionId,
+    ratingId,
+    isKinect,
+    isSpecial,
+    releaseYear,
+    developer,
+    publisher,
+    genre
+  } = req.body;
+
+  const sql = `
+    UPDATE gamesdatabase 
+    SET title = ?, regionId = ?, ratingId = ?, 
+        isKinect = ?, isSpecial = ?, releaseYear = ?,
+        developer = ?, publisher = ?, genre = ?
+    WHERE id = ?
+  `;
+
+  const values = [
+    title,
+    regionId,
+    ratingId,
+    isKinect ? 1 : 0,
+    isSpecial ? 1 : 0,
+    releaseYear || null,
+    developer || null,
+    publisher || null,
+    genre || null,
+    id
+  ];
+
+  db.run(sql, values, function(err) {
+    if (err) {
+      console.error('Error updating game:', err);
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    
+    if (this.changes === 0) {
+      res.status(404).json({ error: 'Game not found' });
+      return;
+    }
+
+    res.json({ 
+      message: 'Game updated successfully',
+      id: id
+    });
+  });
+});
+
 export default router; 

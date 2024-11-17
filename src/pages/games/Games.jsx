@@ -6,6 +6,7 @@ import { Edit2, Trash2 } from 'lucide-react';
 import { Image } from 'lucide-react';
 import { api } from '../../services/api';
 import Select from 'react-select';
+import EditGameModal from '../../components/games/EditGameModal';
 
 const Games = () => {
   const [games, setGames] = useState([]);
@@ -13,20 +14,29 @@ const Games = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [collectionGames, setCollectionGames] = useState([]);
-  const [ratings, setRatings] = useState({});
+  const [ratings, setRatings] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [gamesPerPage, setGamesPerPage] = useState(10);
   const itemsPerPageOptions = [10, 25, 50, 100];
+  const [selectedGame, setSelectedGame] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [regions, setRegions] = useState([]);
 
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const response = await api.getSetting('gamesdatabasePageSize');
-        if (response && response.value) {
-          setGamesPerPage(parseInt(response.value));
-          loadGames(1, parseInt(response.value));
+        const [settingsResponse, regionsResponse] = await Promise.all([
+          api.getSetting('gamesdatabasePageSize'),
+          api.getAllRegions()
+        ]);
+        
+        if (settingsResponse && settingsResponse.value) {
+          setGamesPerPage(parseInt(settingsResponse.value));
+          loadGames(1, parseInt(settingsResponse.value));
         }
+        
+        setRegions(regionsResponse);
       } catch (error) {
         console.error('Error loading settings:', error);
         loadGames(1, gamesPerPage);
@@ -54,19 +64,16 @@ const Games = () => {
         collectionResponse.json(),
         ratingsResponse.json()
       ]);
-      
-      const ratingsMap = {};
-      Object.values(ratingsData).flat().forEach(rating => {
-        ratingsMap[rating.id] = rating;
-      });
-      
+
+      setRatings(ratingsData);
       setGames(gamesData.data);
-      setTotalPages(gamesData.pagination.totalPages);
       setConsoles(consolesData);
-      setCollectionGames(collectionData.map(item => item.gameId));
-      setRatings(ratingsMap);
+      setCollectionGames(collectionData.map(game => game.gameId));
+      setTotalPages(gamesData.pagination.totalPages);
+      setCurrentPage(page);
     } catch (error) {
-      setError(error.message);
+      console.error('Error loading data:', error);
+      setError('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -116,7 +123,7 @@ const Games = () => {
   };
 
   const getRatingInfo = (ratingId) => {
-    const rating = ratings[ratingId];
+    const rating = ratings.find(r => r.id === ratingId);
     return rating ? rating.name : null;
   };
 
@@ -135,6 +142,32 @@ const Games = () => {
     } catch (error) {
       console.error('Error saving setting:', error);
       setError('Failed to save display setting');
+    }
+  };
+
+  const handleEdit = (game) => {
+    setSelectedGame(game);
+    setShowEditModal(true);
+  };
+
+  const handleSaveEdit = async (updatedGame) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/gamesdatabase/${updatedGame.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updatedGame),
+      });
+
+      if (!response.ok) throw new Error('Failed to update game');
+
+      loadGames(currentPage);
+      setShowEditModal(false);
+      setSelectedGame(null);
+    } catch (error) {
+      console.error('Error updating game:', error);
+      // You might want to show an error message to the user here
     }
   };
 
@@ -259,7 +292,12 @@ const Games = () => {
                         </thead>
                         <tbody>
                           {games.map(game => (
-                            <tr key={game.id}>
+                            <tr 
+                              key={game.id} 
+                              onClick={() => handleEdit(game)}
+                              style={{ cursor: 'pointer' }}
+                              className="hover-highlight"
+                            >
                               <td style={{ width: '46px', padding: 0 }}>
                                 {game.coverUrl ? (
                                   <img 
@@ -387,16 +425,13 @@ const Games = () => {
                               </td>
                               <td>
                                 <div className="d-flex gap-2 justify-content-center">
-                                  <Edit2 
-                                    size={14} 
-                                    className="text-primary cursor-pointer" 
-                                    onClick={() => {/* handle edit */}}
-                                    style={{ cursor: 'pointer' }}
-                                  />
                                   <Trash2 
                                     size={14} 
                                     className={`text-danger ${collectionGames.includes(game.id) ? 'opacity-50' : 'cursor-pointer'}`}
-                                    onClick={() => !collectionGames.includes(game.id) && handleDelete(game.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      !collectionGames.includes(game.id) && handleDelete(game.id);
+                                    }}
                                     style={{ 
                                       cursor: collectionGames.includes(game.id) ? 'not-allowed' : 'pointer'
                                     }}
@@ -480,8 +515,26 @@ const Games = () => {
             height: auto;
             max-height: none;
           }
+          .hover-highlight:hover {
+            background-color: rgba(0,0,0,0.05);
+          }
         `}
       </style>
+
+      {showEditModal && (
+        <EditGameModal
+          show={showEditModal}
+          game={selectedGame}
+          regions={regions}
+          ratings={ratings}
+          consoles={consoles}
+          onSave={handleSaveEdit}
+          onClose={() => {
+            setShowEditModal(false);
+            setSelectedGame(null);
+          }}
+        />
+      )}
     </div>
   );
 };

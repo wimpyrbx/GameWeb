@@ -174,14 +174,18 @@ const Dashboard = () => {
   const handleModalSave = async (formData) => {
     try {
       setLoading(true);
+      let updatedItem;
+
       if (modalData.isAdd) {
-        await collectionDB.addCollectionItem({
+        const newItem = {
           ...formData,
           gameId: modalData.game.id,
           consoleId: modalData.game.consoleId,
           regionId: modalData.game.regionId,
           addedDate: new Date().toISOString()
-        });
+        };
+        await collectionDB.addCollectionItem(newItem);
+        updatedItem = newItem;
       } else {
         await collectionDB.updateCollectionItem(modalData.existingItem.id, {
           ...formData,
@@ -189,10 +193,17 @@ const Dashboard = () => {
           consoleId: modalData.game.consoleId,
           regionId: modalData.game.regionId
         });
+        updatedItem = { ...modalData.existingItem, ...formData };
       }
+
+      setCollection(prevCollection => 
+        prevCollection.map(item => 
+          item.id === updatedItem.id ? { ...item, ...updatedItem } : item
+        )
+      );
+
       setModalData({ isOpen: false, game: null, existingItem: null, isAdd: false });
-      setSelectedGame(null); // Clear selected game after adding
-      loadData(); // Reload the collection
+      setSelectedGame(null);
       setSuccess(`Successfully ${modalData.isAdd ? 'added' : 'updated'} game in collection`);
     } catch (error) {
       setError(`Failed to ${modalData.isAdd ? 'add' : 'update'} collection item: ${error.message}`);

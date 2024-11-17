@@ -219,6 +219,7 @@ const AddGameManual = ({ onGameAdded }) => {
                 onChange={option => setFormData(prev => ({ ...prev, regionId: option }))}
                 isSearchable
                 required
+                isClearable
               />
             </div>
             <div className="col-md-6">

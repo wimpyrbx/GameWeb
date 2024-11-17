@@ -78,4 +78,25 @@ router.delete('/ratings/:id', (req, res) => {
   });
 });
 
+// Modify the region endpoint
+router.get('/ratings/region/:regionId', (req, res) => {
+  const { regionId } = req.params;
+  console.log(`GET /ratings/region/${regionId} called`);
+  
+  const sql = 'SELECT * FROM ratings WHERE region = ?';
+  const regionIdNum = parseInt(regionId, 10); // Convert to number
+  
+  console.log('Executing SQL:', sql, 'with regionId:', regionIdNum);
+  
+  db.all(sql, [regionIdNum], (err, rows) => {
+    if (err) {
+      console.error('Error fetching ratings by region:', err);
+      res.status(500).json({ error: err.message });
+      return;
+    }
+    console.log('Found ratings:', rows);
+    res.json(rows);
+  });
+});
+
 export default router; 
