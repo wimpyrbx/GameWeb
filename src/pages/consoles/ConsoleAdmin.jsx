@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { consoleDB, gamesDB } from '../../services/db';
+import { Trash2 } from 'lucide-react';
 
 const ConsoleAdmin = () => {
   const [consoles, setConsoles] = useState([]);
@@ -117,84 +118,94 @@ const ConsoleAdmin = () => {
       )}
 
       <div className="content-body">
-        <div className="card mb-4">
-          <div className="card-header">
-            <h3>Add New Console</h3>
+        <div className="row">
+          <div className="col-md-6">
+            <div className="card h-100">
+              <div className="card-header">
+                <h3>Add New Console</h3>
+              </div>
+              <div className="card-body">
+                <form onSubmit={handleAddConsole}>
+                  <div className="form-group">
+                    <label htmlFor="consoleName">Console Name</label>
+                    <input
+                      id="consoleName"
+                      type="text"
+                      className="form-control"
+                      placeholder="Enter console name (e.g., PlayStation 5)"
+                      value={newConsole.name}
+                      onChange={(e) => setNewConsole({ name: e.target.value })}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+                  <div className="mt-3">
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary w-100"
+                      disabled={loading || !newConsole.name.trim()}
+                    >
+                      {loading ? 'Adding...' : 'Add Console'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
           </div>
-          <div className="card-body">
-            <form onSubmit={handleAddConsole} className="row g-3">
-              <div className="col-md-10">
-                <div className="form-group">
-                  <label htmlFor="consoleName">Console Name</label>
-                  <input
-                    id="consoleName"
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter console name (e.g., PlayStation 5)"
-                    value={newConsole.name}
-                    onChange={(e) => setNewConsole({ name: e.target.value })}
-                    required
-                    disabled={loading}
-                  />
+
+          <div className="col-md-6">
+            <div className="card h-100">
+              <div className="card-header d-flex justify-content-between align-items-center">
+                <h3>Console List</h3>
+                <span className="badge badge-info">{consoles.length} Consoles</span>
+              </div>
+              <div className="card-body p-0">
+                <div className="table-responsive">
+                  <table className="table mb-0">
+                    <thead>
+                      <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>Games Count</th>
+                        <th style={{ width: '40px' }}></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {consoles.map(console => (
+                        <tr key={console.id}>
+                          <td>{console.id}</td>
+                          <td>{console.name}</td>
+                          <td>
+                            <span className={`badge ${gamesCount[console.id] ? 'badge-warning' : 'badge-success'}`}>
+                              {gamesCount[console.id] || 0} games
+                            </span>
+                          </td>
+                          <td style={{ textAlign: 'center' }}>
+                            <Trash2 
+                              size={18}
+                              className={`text-danger ${gamesCount[console.id] > 0 ? 'opacity-50' : 'cursor-pointer'}`}
+                              onClick={() => !gamesCount[console.id] && handleDeleteConsole(console.id, console.name)}
+                              style={{ 
+                                cursor: gamesCount[console.id] > 0 ? 'not-allowed' : 'pointer'
+                              }}
+                              title={gamesCount[console.id] > 0 ? 
+                                `Cannot delete - ${gamesCount[console.id]} games exist for this console` : 
+                                'Delete console'}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                      {consoles.length === 0 && (
+                        <tr>
+                          <td colSpan="4" className="text-center">
+                            {loading ? 'Loading consoles...' : 'No consoles found'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
                 </div>
               </div>
-              <div className="col-md-2">
-                <label>&nbsp;</label>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary w-100"
-                  disabled={loading || !newConsole.name.trim()}
-                >
-                  {loading ? 'Adding...' : 'Add Console'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="card-header">
-            <h3>Console List</h3>
-          </div>
-          <div className="card-body">
-            <div className="table-responsive">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Games Count</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {consoles.map(console => (
-                    <tr key={console.id}>
-                      <td>{console.name}</td>
-                      <td>
-                        <span className={`badge ${gamesCount[console.id] ? 'badge-warning' : 'badge-success'}`}>
-                          {gamesCount[console.id] || 0} games
-                        </span>
-                      </td>
-                      <td>
-                        <button 
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDeleteConsole(console.id, console.name)}
-                          disabled={loading || gamesCount[console.id] > 0}
-                        >
-                          {loading ? 'Deleting...' : 'Delete'}
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {consoles.length === 0 && (
-                    <tr>
-                      <td colSpan="3" className="text-center">
-                        {loading ? 'Loading consoles...' : 'No consoles found'}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
             </div>
           </div>
         </div>

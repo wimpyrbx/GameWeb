@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'; // Import icons for view switching
 import EditGameModal from '../../components/games/EditGameModal';
 import AddGameModal from '../../components/games/AddGameModal';
+import CollectionItemModal from '../../components/collection/CollectionItemModal';
 
 const Dashboard = () => {
   const [collection, setCollection] = useState([]);
@@ -34,6 +35,13 @@ const Dashboard = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGame, setSelectedGame] = useState(null);
+  const [modalData, setModalData] = useState({
+    isOpen: false,
+    game: null,
+    existingItem: null,
+    isAdd: false
+  });
+  const [success, setSuccess] = useState('');
 
   useEffect(() => {
     const loadViewType = async () => {
@@ -142,19 +150,43 @@ const Dashboard = () => {
     }
   };
 
-  const handleEdit = (game) => {
-    setEditingGame(game);
+  const handleEdit = (item) => {
+    const game = games.find(g => g.id === item.gameId);
+    if (!game) return;
+
+    setModalData({
+      isOpen: true,
+      game: game,
+      existingItem: item,
+      isAdd: false
+    });
   };
 
-  const handleSave = async (editedGame) => {
+  const handleModalSave = async (formData) => {
     try {
       setLoading(true);
-      // Add API call to save changes
-      await collectionDB.updateCollectionItem(editedGame);
-      setEditingGame(null);
-      await loadData();
+      if (modalData.isAdd) {
+        await collectionDB.addCollectionItem({
+          ...formData,
+          gameId: modalData.game.id,
+          consoleId: modalData.game.consoleId,
+          regionId: modalData.game.regionId,
+          addedDate: new Date().toISOString()
+        });
+      } else {
+        await collectionDB.updateCollectionItem(modalData.existingItem.id, {
+          ...formData,
+          gameId: modalData.game.id,
+          consoleId: modalData.game.consoleId,
+          regionId: modalData.game.regionId
+        });
+      }
+      setModalData({ isOpen: false, game: null, existingItem: null, isAdd: false });
+      setSelectedGame(null); // Clear selected game after adding
+      loadData(); // Reload the collection
+      setSuccess(`Successfully ${modalData.isAdd ? 'added' : 'updated'} game in collection`);
     } catch (error) {
-      setError('Failed to save changes: ' + error.message);
+      setError(`Failed to ${modalData.isAdd ? 'add' : 'update'} collection item: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -272,32 +304,15 @@ const Dashboard = () => {
     }).sort((a, b) => a.label.localeCompare(b.label));
   };
 
-  const handleQuickAdd = async () => {
+  const handleQuickAdd = () => {
     if (!selectedGame) return;
     
-    try {
-      setLoading(true);
-      
-      const collectionItem = {
-        gameId: selectedGame.value,
-        consoleId: selectedGame.game.consoleId,
-        regionId: selectedGame.game.regionId,
-        addedDate: new Date().toISOString(),
-        boxCondition: '3',
-        discCondition: '3',
-        manualCondition: '3',
-        price_override: null
-      };
-
-      await collectionDB.addCollectionItem(collectionItem);
-      setSelectedGame(null);
-      loadData();
-      setSuccess('Game added to collection successfully');
-    } catch (error) {
-      setError('Failed to add game to collection: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
+    setModalData({
+      isOpen: true,
+      game: selectedGame.game,
+      existingItem: null,
+      isAdd: true
+    });
   };
 
   return (
@@ -397,25 +412,18 @@ const Dashboard = () => {
             {renderCollectionItems()}
           </div>
         </div>
+
+        {modalData.isOpen && (
+          <CollectionItemModal
+            isOpen={modalData.isOpen}
+            onClose={() => setModalData({ isOpen: false, game: null, existingItem: null, isAdd: false })}
+            onSave={handleModalSave}
+            game={modalData.game}
+            existingItem={modalData.existingItem}
+            isAdd={modalData.isAdd}
+          />
+        )}
       </div>
-
-      {showAddModal && (
-        <AddGameModal
-          onClose={() => setShowAddModal(false)}
-          onAdd={handleAddToCollection}
-          games={games}
-          consoles={consoles}
-          loading={loading}
-        />
-      )}
-
-      {editingGame && (
-        <EditGameModal
-          game={editingGame}
-          onClose={() => setEditingGame(null)}
-          onSave={handleSave}
-        />
-      )}
     </div>
   );
 };

@@ -2,10 +2,11 @@ const API_URL = 'http://localhost:3001/api';
 
 export const api = {
   // Games (updated to use gamesdatabase)
-  async getAllGames() {
-    const response = await fetch(`${API_URL}/gamesdatabase`);
+  async getAllGames(page = 1, limit = 1000) {
+    const response = await fetch(`${API_URL}/gamesdatabase?page=${page}&limit=${limit}`);
     if (!response.ok) throw new Error('Failed to fetch games');
-    return await response.json();
+    const data = await response.json();
+    return data;
   },
 
   async addGame(game) {
@@ -88,7 +89,7 @@ export const api = {
 
   // Settings
   async getSetting(key) {
-    const response = await fetch(`${API_URL}/settings/${key}`);
+    const response = await fetch(`http://localhost:3001/api/settings/${key}`);
     if (!response.ok) throw new Error('Failed to fetch setting');
     return await response.json();
   },
@@ -122,6 +123,71 @@ export const api = {
       method: 'DELETE'
     });
     if (!response.ok) throw new Error('Failed to delete collection item');
+    return await response.json();
+  },
+
+  // Add to your api object
+  async getExchangeRate(currency = 'NOK') {
+    const response = await fetch(`${API_URL}/exchange-rate/${currency}`);
+    if (!response.ok) throw new Error('Failed to fetch exchange rate');
+    return await response.json();
+  },
+
+  // Add to your api object
+  async updateCollectionItem(id, item) {
+    const response = await fetch(`${API_URL}/collection/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(item),
+    });
+    if (!response.ok) throw new Error('Failed to update collection item');
+    return await response.json();
+  },
+
+  // Add to your api object
+  async refreshExchangeRate(currency = 'NOK') {
+    const response = await fetch(`${API_URL}/exchange-rate/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ currency })
+    });
+    if (!response.ok) throw new Error('Failed to refresh exchange rate');
+    return await response.json();
+  },
+
+  async getTableSchemas() {
+    const response = await fetch(`${API_URL}/schemas`);
+    if (!response.ok) throw new Error('Failed to fetch schemas');
+    return await response.json();
+  },
+
+  async getTableColumns(table) {
+    const response = await fetch(`${API_URL}/schemas/${table}/columns`);
+    if (!response.ok) throw new Error('Failed to fetch columns');
+    return await response.json();
+  },
+
+  // Add this method to the api object
+  async clearTable(tableName) {
+    const response = await fetch(`${API_URL}/clear-table/${tableName}`, {
+      method: 'POST'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to clear table');
+    }
+    return await response.json();
+  },
+
+  // Add this method to the api object
+  async clearDatabase() {
+    const response = await fetch(`${API_URL}/clear-database`, {
+      method: 'POST'
+    });
+    if (!response.ok) {
+      const error = await response.json();
+      throw new Error(error.error || 'Failed to clear database');
+    }
     return await response.json();
   }
 }; 

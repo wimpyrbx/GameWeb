@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { regionDB, gamesDB } from '../../services/db';
+import { Trash2 } from 'lucide-react';
 
 const RegionAdmin = () => {
   const [regions, setRegions] = useState([]);
@@ -121,91 +122,96 @@ const RegionAdmin = () => {
       )}
 
       <div className="content-body">
-        <div className="card mb-4">
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <h3>Add New Region</h3>
-            <small className="text-muted">Add a new region format to the database</small>
-          </div>
-          <div className="card-body">
-            <form onSubmit={handleAddRegion} className="row g-3">
-              <div className="col-md-10">
-                <div className="form-group">
-                  <label htmlFor="regionName">Region Name</label>
-                  <input
-                    id="regionName"
-                    type="text"
-                    className="form-control"
-                    placeholder="Enter region name (e.g., NTSC-U, PAL)"
-                    value={newRegion.name}
-                    onChange={(e) => setNewRegion({ name: e.target.value })}
-                    required
-                    disabled={loading}
-                  />
-                  <small className="form-text text-muted">
-                    Region names must be unique and cannot be empty
-                  </small>
-                </div>
+        <div className="row">
+          <div className="col-md-6">
+            <div className="card h-100">
+              <div className="card-header">
+                <h3>Add New Region</h3>
               </div>
-              <div className="col-md-2">
-                <label>&nbsp;</label>
-                <button 
-                  type="submit" 
-                  className="btn btn-primary w-100"
-                  disabled={loading || !newRegion.name.trim()}
-                >
-                  {loading ? 'Adding...' : 'Add Region'}
-                </button>
+              <div className="card-body">
+                <form onSubmit={handleAddRegion}>
+                  <div className="form-group">
+                    <label htmlFor="regionName">Region Name</label>
+                    <input
+                      id="regionName"
+                      type="text"
+                      className="form-control"
+                      placeholder="Enter region name (e.g., NTSC-U, PAL)"
+                      value={newRegion.name}
+                      onChange={(e) => setNewRegion({ name: e.target.value })}
+                      required
+                      disabled={loading}
+                    />
+                    <small className="form-text text-muted">
+                      Region names must be unique and cannot be empty
+                    </small>
+                  </div>
+                  <div className="mt-3">
+                    <button 
+                      type="submit" 
+                      className="btn btn-primary w-100"
+                      disabled={loading || !newRegion.name.trim()}
+                    >
+                      {loading ? 'Adding...' : 'Add Region'}
+                    </button>
+                  </div>
+                </form>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
 
-        <div className="card">
-          <div className="card-header d-flex justify-content-between align-items-center">
-            <h3>Region List</h3>
-            <span className="badge badge-info">{regions.length} Regions</span>
-          </div>
-          <div className="card-body">
-            <table className="table table-striped">
-              <thead>
-                <tr>
-                  <th>Name</th>
-                  <th>Games Count</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {regions.map(region => (
-                  <tr key={region.id}>
-                    <td>{region.name}</td>
-                    <td>
-                      <span className={`badge ${gamesCount[region.id] ? 'badge-warning' : 'badge-success'}`}>
-                        {gamesCount[region.id] || 0} games
-                      </span>
-                    </td>
-                    <td>
-                      <button 
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleDeleteRegion(region.id, region.name)}
-                        disabled={loading || gamesCount[region.id] > 0}
-                        title={gamesCount[region.id] > 0 ? 
-                          `Cannot delete - ${gamesCount[region.id]} games exist for this region` : 
-                          'Delete region'}
-                      >
-                        {loading ? 'Deleting...' : 'Delete'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-                {regions.length === 0 && (
-                  <tr>
-                    <td colSpan="3" className="text-center">
-                      {loading ? 'Loading regions...' : 'No regions found'}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="col-md-6">
+            <div className="card h-100">
+              <div className="card-header d-flex justify-content-between align-items-center">
+                <h3>Region List</h3>
+                <span className="badge badge-info">{regions.length} Regions</span>
+              </div>
+              <div className="card-body p-0">
+                <table className="table mb-0">
+                  <thead>
+                    <tr>
+                      <th>ID</th>
+                      <th>Name</th>
+                      <th>Games Count</th>
+                      <th style={{ width: '40px' }}></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {regions.map(region => (
+                      <tr key={region.id}>
+                        <td>{region.id}</td>
+                        <td>{region.name}</td>
+                        <td>
+                          <span className={`badge ${gamesCount[region.id] ? 'badge-warning' : 'badge-success'}`}>
+                            {gamesCount[region.id] || 0} games
+                          </span>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <Trash2 
+                            size={18}
+                            className={`text-danger ${gamesCount[region.id] > 0 ? 'opacity-50' : 'cursor-pointer'}`}
+                            onClick={() => !gamesCount[region.id] && handleDeleteRegion(region.id, region.name)}
+                            style={{ 
+                              cursor: gamesCount[region.id] > 0 ? 'not-allowed' : 'pointer'
+                            }}
+                            title={gamesCount[region.id] > 0 ? 
+                              `Cannot delete - ${gamesCount[region.id]} games exist for this region` : 
+                              'Delete region'}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                    {regions.length === 0 && (
+                      <tr>
+                        <td colSpan="4" className="text-center">
+                          {loading ? 'Loading regions...' : 'No regions found'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         </div>
       </div>

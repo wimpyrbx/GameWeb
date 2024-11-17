@@ -596,23 +596,15 @@ body {
 }
 
 .modal-header {
-  padding: 1rem;
-  border-bottom: 1px solid #dee2e6;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  padding: 12px 16px;
 }
 
 .modal-body {
-  padding: 1rem;
+  padding: 0;
 }
 
 .modal-footer {
-  padding: 1rem;
-  border-top: 1px solid #dee2e6;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.5rem;
+  padding: 12px 16px;
 }
 
 /* Add styles for colored menu icons */
@@ -1252,8 +1244,8 @@ div[class*="game-select__menu"] {
 .collection-item-details {
   display: grid;
   grid-template-columns: 200px 1fr;
-  gap: 24px;
-  padding: 20px;
+  gap: 16px;
+  padding: 12px;
 }
 
 .cover-section {
@@ -1281,16 +1273,18 @@ div[class*="game-select__menu"] {
 }
 
 .condition-section {
-  background: #f8f9fa;
-  padding: 16px;
+  background: white;
+  border: 1px solid #dee2e6;
   border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
 }
 
 .condition-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 16px;
-  margin-top: 16px;
+  gap: 8px;
+  margin-bottom: 8px;
 }
 
 .condition-item {
@@ -1311,27 +1305,31 @@ div[class*="game-select__menu"] {
 }
 
 .cib-status {
-  margin-top: 16px;
-  padding: 8px;
+  margin: 0;
+  padding: 6px;
   border-radius: 4px;
   text-align: center;
   font-weight: 500;
+  border: 1px solid;
 }
 
 .cib-status.is-cib {
   background-color: #d1fae5;
   color: #065f46;
+  border-color: #6ee7b7;
 }
 
 .cib-status.not-cib {
   background-color: #fee2e2;
   color: #991b1b;
+  border-color: #fca5a5;
 }
 
 .price-section {
-  background: #f8f9fa;
-  padding: 16px;
+  background: white;
+  border: 1px solid #dee2e6;
   border-radius: 8px;
+  padding: 12px;
 }
 
 .price-override {
@@ -1363,4 +1361,103 @@ div[class*="game-select__menu"] {
   .condition-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* Add these styles for the price table */
+.price-table {
+  background: white;
+  margin-bottom: 1rem;
+}
+
+.price-table td {
+  padding: 0.5rem;
+}
+
+.price-table td:first-child {
+  font-weight: 500;
+  width: 120px;
+}
+
+.price-table td:last-child {
+  text-align: right;
+}
+
+.final-price {
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.final-price h5 {
+  margin: 0;
+  color: #2d3748;
+}
+
+/* Add styles for flags section */
+.flags-section {
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 16px;
+}
+
+.flags-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+
+.flag-item {
+  display: flex;
+  align-items: center;
+}
+
+.flag-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.flag-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+}
+
+.flag-label input[type="checkbox"]:disabled + span {
+  color: #6c757d;
+  font-style: italic;
+}
+
+/* Exchange rate info styles */
+.exchange-rate-info {
+  padding: 12px;
+  background: #171e28;
+  border-radius: 4px;
+  margin-bottom: 12px;
+}
+
+.exchange-rate-info .rate-value {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.exchange-rate-info .last-updated {
+  font-size: 0.8rem;
+  color: #718096;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
 }

@@ -1,5 +1,4 @@
 import React from 'react';
-import Select from 'react-select';
 import { 
   Trash2, 
   Image, 
@@ -67,7 +66,10 @@ const CollectionCard = ({
             <img 
               src={item.gameDetails.coverUrl} 
               alt={item.gameDetails.title} 
-              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/placeholder.png';
+              }}
             />
           ) : (
             <div className="placeholder-cover">
@@ -98,18 +100,22 @@ const CollectionCard = ({
               <div className="price-label">
                 <DollarSign size={16} className="me-1" />
               </div>
-              <div className="price-value">{item.cibPrice !== null ? `$${item.cibPrice}` : '-'}</div>
+              <div className="price-value">
+                {item.gameDetails.CIB_NOK2 ? `kr ${item.gameDetails.CIB_NOK2}` : '-'}
+              </div>
             </div>
             <div className="price-item me-3">
               <div className="price-label">Override:</div>
-              <div className="price-value">{item.price_override || '-'}</div>
+              <div className="price-value">{item.PriceOverride ? `kr ${item.PriceOverride}` : '-'}</div>
             </div>
             <div className="price-item">
               <div className="price-label">Final:</div>
               <div className="price-value">
-                {item.price_override ? 
-                  `$${item.price_override} (Override)` : 
-                  item.cibPrice ? `$${item.cibPrice} (CIB)` : '-'}
+                {item.PriceOverride ? 
+                  `kr ${item.PriceOverride} (Override)` : 
+                  item.isCib ? 
+                    (item.gameDetails.CIB_NOK2 ? `kr ${item.gameDetails.CIB_NOK2} (CIB)` : '-') :
+                    (item.gameDetails.LOOSE_NOK2 ? `kr ${item.gameDetails.LOOSE_NOK2} (Loose)` : '-')}
               </div>
             </div>
           </div>

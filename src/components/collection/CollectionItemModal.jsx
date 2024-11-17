@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, DollarSign, Box as BoxIcon, Book as ManualIcon, Disc as DiscIcon, Image } from 'lucide-react';
+import { X, DollarSign, Box as BoxIcon, Book as ManualIcon, Disc as DiscIcon, Image, Check } from 'lucide-react';
 import Select from 'react-select';
 
 const conditionOptions = [
@@ -24,7 +24,11 @@ const CollectionItemModal = ({
     manualCondition: '3',
     discCondition: '3',
     price_override: '',
-    isCib: true
+    isCib: true,
+    isNew: false,
+    isPromo: false,
+    isSpecial: false,
+    isKinect: game?.title?.toLowerCase().includes('kinect') || false
   });
 
   useEffect(() => {
@@ -36,10 +40,14 @@ const CollectionItemModal = ({
         price_override: existingItem.price_override || '',
         isCib: !['missing', '0'].includes(existingItem.boxCondition) && 
                !['missing', '0'].includes(existingItem.manualCondition) && 
-               !['missing', '0'].includes(existingItem.discCondition)
+               !['missing', '0'].includes(existingItem.discCondition),
+        isNew: existingItem.isNew || false,
+        isPromo: existingItem.isPromo || false,
+        isSpecial: existingItem.isSpecial || false,
+        isKinect: existingItem.isKinect || game?.title?.toLowerCase().includes('kinect') || false
       });
     }
-  }, [existingItem]);
+  }, [existingItem, game]);
 
   const handleConditionChange = (field, value) => {
     setFormData(prev => {
@@ -63,13 +71,23 @@ const CollectionItemModal = ({
     });
   };
 
+  const getFinalPrice = () => {
+    if (formData.PriceOverride) {
+      return `kr ${formData.PriceOverride} (Override)`;
+    }
+    if (formData.isCib && game.CIB_NOK2) {
+      return `kr ${game.CIB_NOK2} (CIB)`;
+    }
+    return game.LOOSE_NOK2 ? `kr ${game.LOOSE_NOK2} (Loose)` : '-';
+  };
+
   if (!isOpen) return null;
 
   return (
     <div className="modal-overlay">
       <div className="modal-content collection-item-modal">
         <div className="modal-header">
-          <h3>{isAdd ? 'Add to Collection' : 'Edit Collection Item'}</h3>
+          <h3>{game.title}</h3>
           <button className="btn-close" onClick={onClose}>
             <X size={20} />
           </button>
@@ -93,58 +111,115 @@ const CollectionItemModal = ({
             </div>
 
             <div className="info-section">
-              <h4 className="game-title">{game.title}</h4>
-              
-              <div className="condition-section">
-                <h5>Condition Ratings</h5>
-                <div className="condition-grid">
-                  <div className="condition-item">
-                    <label>
-                      <BoxIcon size={16} className="me-2" />
-                      Box
-                    </label>
-                    <Select
-                      options={conditionOptions}
-                      value={conditionOptions.find(opt => opt.value === formData.boxCondition)}
-                      onChange={(option) => handleConditionChange('boxCondition', option.value)}
-                      className="condition-select"
-                    />
-                  </div>
-
-                  <div className="condition-item">
-                    <label>
-                      <ManualIcon size={16} className="me-2" />
-                      Manual
-                    </label>
-                    <Select
-                      options={conditionOptions}
-                      value={conditionOptions.find(opt => opt.value === formData.manualCondition)}
-                      onChange={(option) => handleConditionChange('manualCondition', option.value)}
-                      className="condition-select"
-                    />
-                  </div>
-
-                  <div className="condition-item">
-                    <label>
-                      <DiscIcon size={16} className="me-2" />
-                      Disc
-                    </label>
-                    <Select
-                      options={conditionOptions}
-                      value={conditionOptions.find(opt => opt.value === formData.discCondition)}
-                      onChange={(option) => handleConditionChange('discCondition', option.value)}
-                      className="condition-select"
-                    />
-                  </div>
+              <div className="condition-grid">
+                <div className="condition-item">
+                  <label>
+                    <BoxIcon size={16} className="me-2" />
+                    Box
+                  </label>
+                  <Select
+                    options={conditionOptions}
+                    value={conditionOptions.find(opt => opt.value === formData.boxCondition)}
+                    onChange={(option) => handleConditionChange('boxCondition', option.value)}
+                    className="condition-select"
+                  />
                 </div>
 
-                <div className={`cib-status ${formData.isCib ? 'is-cib' : 'not-cib'}`}>
-                  {formData.isCib ? 'Complete In Box (CIB)' : 'Not Complete In Box'}
+                <div className="condition-item">
+                  <label>
+                    <ManualIcon size={16} className="me-2" />
+                    Manual
+                  </label>
+                  <Select
+                    options={conditionOptions}
+                    value={conditionOptions.find(opt => opt.value === formData.manualCondition)}
+                    onChange={(option) => handleConditionChange('manualCondition', option.value)}
+                    className="condition-select"
+                  />
+                </div>
+
+                <div className="condition-item">
+                  <label>
+                    <DiscIcon size={16} className="me-2" />
+                    Disc
+                  </label>
+                  <Select
+                    options={conditionOptions}
+                    value={conditionOptions.find(opt => opt.value === formData.discCondition)}
+                    onChange={(option) => handleConditionChange('discCondition', option.value)}
+                    className="condition-select"
+                  />
+                </div>
+              </div>
+
+              <div className={`cib-status ${formData.isCib ? 'is-cib' : 'not-cib'}`}>
+                {formData.isCib ? 'Complete In Box (CIB)' : 'Not Complete In Box'}
+              </div>
+
+              <div className="flags-section">
+                <div className="flags-grid">
+                  <div className="flag-item">
+                    <label className="flag-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.isNew}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isNew: e.target.checked }))}
+                      />
+                      <span>New</span>
+                    </label>
+                  </div>
+                  <div className="flag-item">
+                    <label className="flag-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.isPromo}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isPromo: e.target.checked }))}
+                      />
+                      <span>Promo</span>
+                    </label>
+                  </div>
+                  <div className="flag-item">
+                    <label className="flag-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.isSpecial}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isSpecial: e.target.checked }))}
+                      />
+                      <span>Special</span>
+                    </label>
+                  </div>
+                  <div className="flag-item">
+                    <label className="flag-label">
+                      <input
+                        type="checkbox"
+                        checked={formData.isKinect}
+                        onChange={(e) => setFormData(prev => ({ ...prev, isKinect: e.target.checked }))}
+                        disabled={game?.title?.toLowerCase().includes('kinect')}
+                      />
+                      <span>Kinect{game?.title?.toLowerCase().includes('kinect') ? ' (Auto)' : ''}</span>
+                    </label>
+                  </div>
                 </div>
               </div>
 
               <div className="price-section">
-                <h5>Price Information</h5>
+                <table className="price-table">
+                  <tbody>
+                    <tr>
+                      <td>Loose:</td>
+                      <td>kr {game.LOOSE_NOK2 || '-'}</td>
+                    </tr>
+                    <tr>
+                      <td>CIB:</td>
+                      <td>kr {game.CIB_NOK2 || '-'}</td>
+                    </tr>
+                    <tr>
+                      <td>New:</td>
+                      <td>kr {game.NEW_NOK2 || '-'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+
                 <div className="price-override">
                   <label>Price Override</label>
                   <div className="input-group">
@@ -163,6 +238,10 @@ const CollectionItemModal = ({
                   <small className="text-muted">
                     Leave empty to use PriceCharting values
                   </small>
+                </div>
+
+                <div className="final-price mt-3">
+                  <h5>Final Price: {getFinalPrice()}</h5>
                 </div>
               </div>
             </div>

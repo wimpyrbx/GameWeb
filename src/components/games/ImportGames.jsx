@@ -1,220 +1,184 @@
-import React, { useState } from 'react';
-import { gamesDB, consoleDB, regionDB, pricesDB } from '../../services/db';
-import { determineRegion, parseGamesList } from '../../utils/importHelpers';
-import { FileSpreadsheet, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from 'lucide-react';
+import React, { useState, useCallback } from 'react';
+import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { useDropzone } from 'react-dropzone';
+import { parseGamesList } from '../../utils/importHelpers';
 
 const ImportGames = ({ onImportComplete }) => {
   const [importing, setImporting] = useState(false);
-  const [progress, setProgress] = useState({ current: 0, total: 0, failed: 0 });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [showDetails, setShowDetails] = useState(false);
+  const [selectedFile, setSelectedFile] = useState(null);
 
-  const handleImport = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const onDrop = useCallback(acceptedFiles => {
+    if (acceptedFiles.length > 0) {
+      setSelectedFile(acceptedFiles[0]);
+      setError('');
+    }
+  }, []);
+
+  const { getRootProps, getInputProps, isDragActive } = useDropzone({
+    onDrop,
+    accept: {
+      'text/tab-separated-values': ['.tsv'],
+      'text/plain': ['.txt']
+    },
+    multiple: false
+  });
+
+  const handleImport = async () => {
+    if (!selectedFile) {
+      setError('Please select a file first');
+      return;
+    }
+
+    setImporting(true);
+    setError('');
+    setSuccess('');
 
     try {
-      setImporting(true);
-      setError('');
-      setSuccess('');
-      setProgress({ current: 0, total: 0, failed: 0 });
-
-      const text = await file.text();
-      const games = parseGamesList(text);
+      const text = await selectedFile.text();
+      const games = await parseGamesList(text);
       
-      setProgress(prev => ({ ...prev, total: games.length }));
-
-      const [consoles, regions] = await Promise.all([
-        consoleDB.getAllConsoles(),
-        regionDB.getAllRegions()
-      ]);
-
-      const xbox360 = consoles.find(c => c.name === 'Xbox 360');
-      if (!xbox360) {
-        throw new Error('Xbox 360 console not found in database');
-      }
-
-      let successCount = 0;
-      let failedCount = 0;
-      const errors = [];
-
-      // Process each game
-      for (let i = 0; i < games.length; i++) {
-        const gameData = games[i];
-        
+      let failedImports = [];
+      
+      for (const game of games) {
         try {
-          const regionName = determineRegion(gameData.rating);
-          const region = regions.find(r => r.name === regionName);
-          
-          if (!region) {
-            throw new Error(`Region ${regionName} not found for game ${gameData.title}`);
-          }
-
-          // Add the game first
-          const gameId = await gamesDB.addGame({
-            title: gameData.title,
-            consoleId: xbox360.id,
-            regionId: region.id,
-            rating: gameData.rating,
-            pricechartingId: gameData.pricechartingId,
-            pricechartingUrl: gameData.pricechartingUrl,
-            coverUrl: gameData.coverUrl
+          const response = await fetch('http://localhost:3001/api/gamesdatabase', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(game)
           });
-
-          // Then add the prices if they exist
-          if (gameData.prices && gameData.pricechartingId) {
-            await pricesDB.addPrice({
-              pricechartingId: gameData.pricechartingId,
-              ...gameData.prices,
-              date: new Date().toISOString()
-            });
-          }
           
-          successCount++;
+          if (!response.ok) {
+            throw new Error(`Failed to add game`);
+          }
         } catch (error) {
-          failedCount++;
-          errors.push(`Failed to import "${gameData.title}": ${error.message}`);
+          failedImports.push(`Failed to import "${game.title}": ${error.message}`);
         }
-
-        setProgress(prev => ({ 
-          ...prev, 
-          current: i + 1,
-          failed: failedCount
-        }));
       }
 
-      if (successCount > 0) {
-        setSuccess(`Successfully imported ${successCount} games with prices`);
+      if (failedImports.length > 0) {
+        setError(`Failed to import ${failedImports.length} games:\n${failedImports.join('\n')}`);
+      } else {
+        setSuccess(`Successfully imported ${games.length} games`);
+        setSelectedFile(null);
+        if (onImportComplete) {
+          onImportComplete();
+        }
       }
-      if (failedCount > 0) {
-        setError(`Failed to import ${failedCount} games:\n${errors.join('\n')}`);
-      }
-
-      if (onImportComplete) onImportComplete();
     } catch (error) {
-      setError('Import failed: ' + error.message);
+      setError('Error parsing file: ' + error.message);
     } finally {
       setImporting(false);
     }
   };
 
   return (
-    <div className="card h-100">
-      <div className="card-header">
-        <div className="d-flex align-items-center">
-          <FileSpreadsheet size={20} className="me-2" />
-          <h3 className="mb-0">Import Games</h3>
-        </div>
-      </div>
-      <div className="card-body">
-        {error && (
-          <div className="alert alert-danger small py-2">
-            <AlertCircle size={14} className="me-1" />
-            {error}
+    <div className="content-wrapper">
+      <div className="content-body">
+        <div className="card">
+          <div className="card-header">
+            <h3>Import Games</h3>
           </div>
-        )}
-        {success && (
-          <div className="alert alert-success small py-2">
-            <CheckCircle2 size={14} className="me-1" />
-            {success}
-          </div>
-        )}
-        
-        <div className="form-group">
-          <input
-            type="file"
-            className="form-control form-control-sm"
-            accept=".txt,.tsv"
-            onChange={handleImport}
-            disabled={importing}
-          />
-          <button 
-            className="btn btn-link btn-sm mt-1 p-0 text-decoration-none"
-            onClick={() => setShowDetails(!showDetails)}
-            type="button"
-          >
-            {showDetails ? (
-              <><ChevronUp size={14} className="me-1" /> Hide format details</>
-            ) : (
-              <><ChevronDown size={14} className="me-1" /> Show format details</>
+          <div className="card-body">
+            {error && (
+              <div className="alert alert-danger d-flex align-items-center" role="alert">
+                <AlertCircle size={20} className="me-2" />
+                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{error}</pre>
+              </div>
             )}
-          </button>
-        </div>
-
-        {importing && (
-          <div className="mt-2">
-            <div className="progress" style={{ height: '2px' }}>
-              <div 
-                className="progress-bar" 
-                style={{ width: `${(progress.current / progress.total) * 100}%` }}
-              />
-            </div>
-            <small className="text-muted d-block mt-1">
-              {progress.current} / {progress.total}
-              {progress.failed > 0 && ` (${progress.failed} failed)`}
-            </small>
-          </div>
-        )}
-
-        {showDetails && (
-          <div className="import-format-guide mt-3">
-            <div className="format-section">
-              <div className="format-header">
-                <h6 className="mb-3">File Format Requirements</h6>
+            
+            {success && (
+              <div className="alert alert-success d-flex align-items-center" role="alert">
+                <CheckCircle size={20} className="me-2" />
+                {success}
               </div>
+            )}
+
+            <div 
+              {...getRootProps()} 
+              className={`dropzone-area ${isDragActive ? 'active' : ''} ${selectedFile ? 'has-file' : ''}`}
+              style={{
+                border: '2px dashed #ccc',
+                borderRadius: '8px',
+                padding: '40px 20px',
+                textAlign: 'center',
+                cursor: 'pointer',
+                backgroundColor: isDragActive ? '#f8f9fa' : 'white',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <input {...getInputProps()} />
               
-              <div className="format-columns">
-                <div className="required-columns">
-                  <div className="column-type-label">Required Fields</div>
-                  <div className="column-list">
-                    <div className="column-item">
-                      <span className="column-badge required">ProductName</span>
-                      <span className="column-desc">Game title (e.g., "Halo 3")</span>
-                    </div>
-                    <div className="column-item">
-                      <span className="column-badge rating">PEGI_Final</span>
-                      <span className="column-desc">Age rating (e.g., "PEGI 16")</span>
-                    </div>
-                    <div className="column-item">
-                      <span className="column-badge url">PricechartingUrl</span>
-                      <span className="column-desc">Full URL to pricecharting.com page</span>
-                    </div>
-                  </div>
-                </div>
+              <div className="d-flex flex-column align-items-center">
+                <Upload 
+                  size={48} 
+                  className="mb-3" 
+                  style={{ 
+                    color: isDragActive ? '#0d6efd' : '#6c757d',
+                    transition: 'color 0.3s ease'
+                  }} 
+                />
                 
-                <div className="optional-columns">
-                  <div className="column-type-label">Optional Fields</div>
-                  <div className="column-list">
-                    <div className="column-item">
-                      <span className="column-badge optional">CoverUrl</span>
-                      <span className="column-desc">URL to game cover image</span>
-                    </div>
-                    <div className="column-item">
-                      <span className="column-badge optional">PricechartingID</span>
-                      <span className="column-desc">Numeric ID from pricecharting.com</span>
-                    </div>
+                {isDragActive ? (
+                  <p className="mb-0">Drop the file here...</p>
+                ) : selectedFile ? (
+                  <div className="selected-file">
+                    <FileText size={24} className="me-2" />
+                    <span>{selectedFile.name}</span>
                   </div>
-                </div>
-              </div>
-
-              <div className="format-example mt-3">
-                <div className="example-header">
-                  Example Format
-                </div>
-                <div className="example-content">
-                  <code>ProductName[tab]PEGI_Final[tab]PricechartingUrl[tab]CoverUrl[tab]PricechartingID</code>
-                </div>
-              </div>
-
-              <div className="format-note mt-3">
-                <AlertCircle size={14} className="me-2" />
-                Fields must be separated by tabs. Column headers must match exactly.
+                ) : (
+                  <div>
+                    <p className="mb-1">Drag and drop your TSV file here</p>
+                    <p className="text-muted mb-0">or click to select a file</p>
+                  </div>
+                )}
               </div>
             </div>
+
+            <div className="mt-4 text-center">
+              <button
+                className="btn btn-primary"
+                onClick={handleImport}
+                disabled={importing || !selectedFile}
+              >
+                {importing ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Importing...
+                  </>
+                ) : (
+                  <>Import Games</>
+                )}
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
+
+      <style>
+        {`
+          .dropzone-area {
+            outline: none;
+          }
+          .dropzone-area.active {
+            border-color: #0d6efd;
+          }
+          .dropzone-area.has-file {
+            border-color: #198754;
+          }
+          .selected-file {
+            display: flex;
+            align-items: center;
+            color: #198754;
+          }
+          .alert pre {
+            font-family: inherit;
+          }
+        `}
+      </style>
     </div>
   );
 };

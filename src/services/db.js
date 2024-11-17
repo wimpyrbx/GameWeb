@@ -2,7 +2,8 @@ import { api } from './api';
 
 export const gamesDB = {
   async getAllGames() {
-    return await api.getAllGames();
+    const response = await api.getAllGames();
+    return response.data || [];
   },
   
   async addGame(game) {
@@ -51,6 +52,9 @@ export const collectionDB = {
   },
   async deleteCollectionItem(id) {
     return await api.deleteCollection(id);
+  },
+  async updateCollectionItem(id, item) {
+    return await api.updateCollectionItem(id, item);
   }
 };
 
@@ -73,6 +77,14 @@ export const saveSetting = async (key, value) => {
 export const getSetting = async (key) => {
   const response = await api.getSetting(key);
   return response.value;
+};
+
+export const clearTable = async (tableName) => {
+  return await api.clearTable(tableName);
+};
+
+export const clearDatabase = async () => {
+  return await api.clearDatabase();
 };
 
 // Update other DB functions similarly 

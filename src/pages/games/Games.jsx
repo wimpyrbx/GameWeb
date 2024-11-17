@@ -1,97 +1,69 @@
 import React, { useState, useEffect } from 'react';
-import { gamesDB, consoleDB, regionDB, collectionDB } from '../../services/db';
 import ImportGames from '../../components/games/ImportGames';
-import ResponsiveTable from '../../components/ui/ResponsiveTable';
-import CollectionCard from '../../components/ui/CollectionCard';
-import { Grid, List, Database, Trash2 } from 'lucide-react';
+import AddGameManual from '../../components/games/AddGameManual';
 import RatingIcon from '../../components/ui/RatingIcon';
+import { Edit2, Trash2 } from 'lucide-react';
+import { Image } from 'lucide-react';
+import { api } from '../../services/api';
 
 const Games = () => {
   const [games, setGames] = useState([]);
   const [consoles, setConsoles] = useState([]);
-  const [regions, setRegions] = useState([]);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [viewMode, setViewMode] = useState('card');
-  const [newGame, setNewGame] = useState({
-    title: '',
-    consoleId: '',
-    regionId: '',
-    rating: '',
-    pricechartingId: '',
-    pricechartingUrl: '',
-    coverUrl: ''
-  });
-  const [pageSize, setPageSize] = useState(10);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [collectionGames, setCollectionGames] = useState([]);
+  const [ratings, setRatings] = useState({});
   const [currentPage, setCurrentPage] = useState(1);
-  const [collectionItems, setCollectionItems] = useState([]);
+  const [totalPages, setTotalPages] = useState(1);
+  const [gamesPerPage, setGamesPerPage] = useState(50);
+  const itemsPerPageOptions = [10, 25, 50, 100];
 
   useEffect(() => {
-    loadData();
+    const loadSettings = async () => {
+      try {
+        const response = await api.getSetting('games_database_show_per_page');
+        if (response && response.value) {
+          setGamesPerPage(parseInt(response.value));
+          loadGames(1, parseInt(response.value));
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error);
+        loadGames(1, gamesPerPage);
+      }
+    };
+    loadSettings();
   }, []);
 
-  const loadData = async () => {
+  const loadGames = async (page = 1, limit = gamesPerPage) => {
     try {
       setLoading(true);
-      const [allGames, allConsoles, allRegions, allCollectionItems] = await Promise.all([
-        gamesDB.getAllGames(),
-        consoleDB.getAllConsoles(),
-        regionDB.getAllRegions(),
-        collectionDB.getAllCollectionItems()
+      const [gamesResponse, consolesResponse, collectionResponse, ratingsResponse] = await Promise.all([
+        fetch(`http://localhost:3001/api/gamesdatabase?page=${page}&limit=${limit}`),
+        fetch('http://localhost:3001/api/consoles'),
+        fetch('http://localhost:3001/api/collection'),
+        fetch('http://localhost:3001/api/ratings')
       ]);
-      setGames(allGames);
-      setConsoles(allConsoles);
-      setRegions(allRegions);
-      setCollectionItems(allCollectionItems);
-    } catch (error) {
-      setError('Failed to load data: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleAddGame = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSuccess('');
-
-    try {
-      setLoading(true);
-      const gameId = await gamesDB.addGame({
-        ...newGame,
-        consoleId: Number(newGame.consoleId),
-        regionId: Number(newGame.regionId)
+      
+      if (!gamesResponse.ok || !consolesResponse.ok || !collectionResponse.ok || !ratingsResponse.ok) 
+        throw new Error('Failed to fetch data');
+      
+      const [gamesData, consolesData, collectionData, ratingsData] = await Promise.all([
+        gamesResponse.json(),
+        consolesResponse.json(),
+        collectionResponse.json(),
+        ratingsResponse.json()
+      ]);
+      
+      const ratingsMap = {};
+      Object.values(ratingsData).flat().forEach(rating => {
+        ratingsMap[rating.id] = rating;
       });
       
-      setSuccess(`Game "${newGame.title}" added successfully with ID: ${gameId}`);
-      setNewGame({
-        title: '',
-        consoleId: '',
-        regionId: '',
-        rating: '',
-        pricechartingId: '',
-        pricechartingUrl: '',
-        coverUrl: ''
-      });
-      loadData();
-    } catch (error) {
-      setError('Error adding game: ' + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteGame = async (id, title) => {
-    if (!window.confirm(`Are you sure you want to delete "${title}"?`)) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      await gamesDB.deleteGame(id);
-      setSuccess(`Game "${title}" deleted successfully`);
-      loadData();
+      setGames(gamesData.data);
+      setTotalPages(gamesData.pagination.totalPages);
+      setConsoles(consolesData);
+      setCollectionGames(collectionData.map(item => item.gameId));
+      setRatings(ratingsMap);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -99,595 +71,377 @@ const Games = () => {
     }
   };
 
-  const handleEditGame = (game) => {
-    console.log('Edit game:', game);
-    alert('Edit functionality coming soon!');
+  useEffect(() => {
+    loadGames(currentPage);
+  }, [currentPage]);
+
+  const handleGameAdded = () => {
+    loadGames(currentPage);
   };
 
-  const handlePageSizeChange = (e) => {
-    setPageSize(Number(e.target.value));
-    setCurrentPage(1);
+  const getConsoleName = (consoleId) => {
+    return consoles.find(c => c.id === consoleId)?.name || 'Unknown Console';
   };
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
+  const formatPrice = (price) => {
+    if (!price) return '-';
+    return new Intl.NumberFormat('en-US', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(price);
   };
 
-  const getPaginatedData = (data) => {
-    const startIndex = (currentPage - 1) * pageSize;
-    const endIndex = startIndex + pageSize;
-    return data.slice(startIndex, endIndex);
+  const formatNOKPrice = (price) => {
+    if (!price) return '-';
+    return `Nok ${Math.floor(price)}`;
   };
 
-  const getPaginationRange = (currentPage, totalPages) => {
-    const delta = 2;
-    const range = [];
-    const rangeWithDots = [];
-
-    // Always show first page
-    range.push(1);
-
-    for (let i = currentPage - delta; i <= currentPage + delta; i++) {
-      if (i > 1 && i < totalPages) {
-        range.push(i);
-      }
+  const handleDelete = async (gameId) => {
+    if (!window.confirm('Are you sure you want to delete this game?')) {
+      return;
     }
 
-    // Always show last page
-    if (totalPages > 1) {
-      range.push(totalPages);
-    }
+    try {
+      const response = await fetch(`http://localhost:3001/api/gamesdatabase/${gameId}`, {
+        method: 'DELETE'
+      });
 
-    // Add dots where needed
-    let l;
-    for (let i of range) {
-      if (l) {
-        if (i - l === 2) {
-          rangeWithDots.push(l + 1);
-        } else if (i - l !== 1) {
-          rangeWithDots.push('...');
-        }
-      }
-      rangeWithDots.push(i);
-      l = i;
+      if (!response.ok) throw new Error('Failed to delete game');
+      
+      loadGames(currentPage); // Reload the games list
+    } catch (error) {
+      setError(error.message);
     }
-
-    return rangeWithDots;
   };
 
-  const isGameInCollection = (gameId) => {
-    return collectionItems.some(item => item.gameId === gameId);
+  const getRatingInfo = (ratingId) => {
+    const rating = ratings[ratingId];
+    return rating ? rating.name : null;
   };
 
-  const renderCollectionItems = () => {
-    if (viewMode === 'card') {
-      return (
-        <div className="collection-cards-grid">
-          {games.map(game => {
-            const console = consoles.find(c => c.id === game.consoleId);
-            const prices = {
-              loose: parseFloat(game.Pricecharting_Loose) || null,
-              cib: parseFloat(game.Pricecharting_Complete) || null,
-              new: parseFloat(game.Pricecharting_New) || null,
-              box: parseFloat(game.Pricecharting_BoxOnly) || null,
-              manual: parseFloat(game.Pricecharting_ManualOnly) || null
-            };
-            
-            return (
-              <CollectionCard
-                key={game.id}
-                item={{
-                  id: game.id,
-                  gameDetails: {
-                    title: game.title,
-                    consoleName: console?.name || 'Unknown Console',
-                    coverUrl: game.coverUrl,
-                    pricechartingId: game.pricechartingId,
-                    pricechartingUrl: game.pricechartingUrl,
-                    displayName: `${console?.name || 'Unknown Console'} <span class="text-muted mx-2">/</span> ${game.title}`
-                  },
-                  addedDate: game.releaseDate,
-                  boxCondition: game.boxCondition || '3',
-                  discCondition: game.discCondition || '3',
-                  manualCondition: game.manualCondition || '3',
-                  prices: prices,
-                  cibPrice: prices.cib,
-                  price_override: game.price_override
-                }}
-                onDelete={handleDeleteGame}
-                onEdit={() => handleEditGame(game)}
-                loading={loading}
-              />
-            );
-          })}
-        </div>
-      );
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleItemsPerPageChange = async (newValue) => {
+    const value = parseInt(newValue);
+    setGamesPerPage(value);
+    setCurrentPage(1); // Reset to first page when changing items per page
+    
+    try {
+      await api.saveSetting('games_database_show_per_page', value.toString());
+      loadGames(1, value);
+    } catch (error) {
+      console.error('Error saving setting:', error);
+      setError('Failed to save display setting');
     }
-
-    return (
-      <ResponsiveTable 
-        columns={[
-          { 
-            header: 'Title', 
-            key: 'title',
-            render: (game) => game.pricechartingUrl ? (
-              <a href={game.pricechartingUrl} target="_blank" rel="noopener noreferrer">
-                {game.title}
-              </a>
-            ) : game.title
-          },
-          { 
-            header: 'Console', 
-            key: 'console', 
-            width: '100px',
-            render: (game) => consoles.find(c => c.id === game.consoleId)?.name 
-          },
-          { 
-            header: 'Region', 
-            key: 'region',
-            width: '80px',
-            render: (game) => (
-              <div className="d-flex align-items-center justify-content-between">
-                <span style={{ minWidth: '35px' }}>{regions.find(r => r.id === game.regionId)?.name}</span>
-                <div style={{ 
-                  height: '16px',
-                  marginLeft: '4px',
-                  display: 'flex',
-                  alignItems: 'center' 
-                }}>
-                  <RatingIcon rating={game.rating} />
-                </div>
-              </div>
-            )
-          },
-          { 
-            header: 'Prices',
-            key: 'prices-group-start',
-            width: '80px',
-            className: 'text-center price-column price-column-start',
-            render: (game) => (
-              <div className="text-center">
-                {game.Pricecharting_Loose ? `$${game.Pricecharting_Loose}` : '-'}
-              </div>
-            )
-          },
-          { 
-            header: 'CIB', 
-            key: 'cib', 
-            width: '80px',
-            className: 'text-center price-column',
-            render: (game) => (
-              <div className="text-center">
-                {game.Pricecharting_Complete ? `$${game.Pricecharting_Complete}` : '-'}
-              </div>
-            )
-          },
-          { 
-            header: 'New', 
-            key: 'new', 
-            width: '80px',
-            className: 'text-center price-column',
-            render: (game) => (
-              <div className="text-center">
-                {game.Pricecharting_New ? `$${game.Pricecharting_New}` : '-'}
-              </div>
-            )
-          },
-          { 
-            header: 'Box', 
-            key: 'box', 
-            width: '80px',
-            className: 'text-center price-column',
-            render: (game) => (
-              <div className="text-center">
-                {game.Pricecharting_BoxOnly ? `$${game.Pricecharting_BoxOnly}` : '-'}
-              </div>
-            )
-          },
-          { 
-            header: 'Manual', 
-            key: 'manual', 
-            width: '80px',
-            className: 'text-center price-column price-column-end',
-            render: (game) => (
-              <div className="text-center">
-                {game.Pricecharting_ManualOnly ? `$${game.Pricecharting_ManualOnly}` : '-'}
-              </div>
-            )
-          },
-          { 
-            header: '',
-            key: 'actions',
-            width: '32px',
-            padding: '4px',
-            render: (game) => {
-              const inCollection = isGameInCollection(game.id);
-              return (
-                <div style={{ 
-                  width: '32px', 
-                  display: 'flex', 
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  padding: '0 8px'
-                }}>
-                  <Trash2 
-                    size={14} 
-                    className={`${inCollection ? 'text-muted' : 'text-danger'} cursor-pointer`}
-                    onClick={() => !inCollection && handleDeleteGame(game.id, game.title)}
-                    style={{ 
-                      opacity: loading || inCollection ? 0.5 : 1,
-                      cursor: inCollection ? 'not-allowed' : (loading ? 'wait' : 'pointer')
-                    }}
-                    title={inCollection ? 'Cannot delete - Game is in collection' : 'Delete game'}
-                  />
-                </div>
-              );
-            }
-          }
-        ]}
-        data={getPaginatedData(games)}
-        isMobile={window.innerWidth <= 1024}
-        emptyMessage={loading ? 'Loading games...' : 'No games in database'}
-        style={{ 
-          fontSize: '0.875rem',
-          lineHeight: '1.2'
-        }}
-      />
-    );
   };
+
+  const PaginationControls = () => (
+    <div className="d-flex justify-content-between align-items-center mt-3">
+      <div>
+        <button 
+          className="btn btn-outline-primary me-2"
+          onClick={() => handlePageChange(1)}
+          disabled={currentPage === 1 || loading}
+        >
+          First
+        </button>
+        <button 
+          className="btn btn-outline-primary me-2"
+          onClick={() => handlePageChange(currentPage - 1)}
+          disabled={currentPage === 1 || loading}
+        >
+          Previous
+        </button>
+      </div>
+      <div className="text-muted">
+        Page {currentPage} of {totalPages}
+      </div>
+      <div>
+        <button 
+          className="btn btn-outline-primary me-2"
+          onClick={() => handlePageChange(currentPage + 1)}
+          disabled={currentPage === totalPages || loading}
+        >
+          Next
+        </button>
+        <button 
+          className="btn btn-outline-primary"
+          onClick={() => handlePageChange(totalPages)}
+          disabled={currentPage === totalPages || loading}
+        >
+          Last
+        </button>
+      </div>
+    </div>
+  );
 
   return (
     <div className="content-wrapper">
       <div className="content-body">
-        <div className="row mb-4">
-          <div className="col-md-4">
-            <ImportGames onImportComplete={loadData} />
+        <div className="row">
+          <div className="col-md-6">
+            <ImportGames onImportComplete={handleGameAdded} />
           </div>
-          
-          <div className="col-md-8">
-            <div className="card">
-              <div className="card-header">
-                <h3>Add New Game to Database</h3>
-              </div>
-              <div className="card-body">
-                <form onSubmit={handleAddGame} className="row g-3">
-                  <div className="col-md-4">
-                    <div className="form-group">
-                      <label>Game Title</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Enter game title"
-                        value={newGame.title}
-                        onChange={(e) => setNewGame({...newGame, title: e.target.value})}
-                        required
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-2">
-                    <div className="form-group">
-                      <label>Console</label>
-                      <select
-                        className="form-control"
-                        value={newGame.consoleId}
-                        onChange={(e) => setNewGame({...newGame, consoleId: e.target.value})}
-                        required
-                      >
-                        <option value="">Select Console</option>
-                        {consoles.map(console => (
-                          <option key={console.id} value={console.id}>
-                            {console.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="col-md-2">
-                    <div className="form-group">
-                      <label>Region</label>
-                      <select
-                        className="form-control"
-                        value={newGame.regionId}
-                        onChange={(e) => setNewGame({...newGame, regionId: e.target.value})}
-                        required
-                      >
-                        <option value="">Select Region</option>
-                        {regions.map(region => (
-                          <option key={region.id} value={region.id}>
-                            {region.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                  <div className="col-md-2">
-                    <div className="form-group">
-                      <label>Rating</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Game rating"
-                        value={newGame.rating}
-                        onChange={(e) => setNewGame({...newGame, rating: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-2">
-                    <div className="form-group">
-                      <label>Pricecharting ID</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        placeholder="Pricecharting ID"
-                        value={newGame.pricechartingId}
-                        onChange={(e) => setNewGame({...newGame, pricechartingId: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-8">
-                    <div className="form-group">
-                      <label>Pricecharting URL</label>
-                      <input
-                        type="url"
-                        className="form-control"
-                        placeholder="https://www.pricecharting.com/game/..."
-                        value={newGame.pricechartingUrl}
-                        onChange={(e) => setNewGame({...newGame, pricechartingUrl: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-4">
-                    <div className="form-group">
-                      <label>Cover URL</label>
-                      <input
-                        type="url"
-                        className="form-control"
-                        placeholder="Cover image URL"
-                        value={newGame.coverUrl}
-                        onChange={(e) => setNewGame({...newGame, coverUrl: e.target.value})}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-12">
-                    <button 
-                      type="submit" 
-                      className="btn btn-primary"
-                      disabled={loading}
-                    >
-                      {loading ? 'Adding...' : 'Add Game'}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+          <div className="col-md-6">
+            <AddGameManual onGameAdded={handleGameAdded} />
           </div>
         </div>
 
-        {error && (
-          <div className="alert alert-danger alert-dismissible fade show" role="alert">
-            {error}
-            <button type="button" className="close" onClick={() => setError('')}>
-              <span>&times;</span>
-            </button>
-          </div>
-        )}
-
-        {success && (
-          <div className="alert alert-success alert-dismissible fade show" role="alert">
-            {success}
-            <button type="button" className="close" onClick={() => setSuccess('')}>
-              <span>&times;</span>
-            </button>
-          </div>
-        )}
-
-        <div className="card">
-          <div className="card-header">
-            <div className="d-flex justify-content-between align-items-center">
-              <div className="d-flex align-items-center">
-                <Database size={20} className="pe-2" />
-                <h3 className="mb-0">Games Database ({games.length} Game{games.length !== 1 ? 's' : ''})</h3>
-              </div>
-            </div>
-          </div>
-          <div className="card-body">
-            <div className="table-controls mb-3">
-              <div className="d-flex justify-content-between align-items-center">
-                <div className="entries-control">
-                  Show 
+        <div className="row mt-4">
+          <div className="col-12">
+            <div className="card">
+              <div className="card-header d-flex justify-content-between align-items-center">
+                <h3>Games Database ({games.length} Games)</h3>
+                <div className="d-flex align-items-center">
+                  <span className="me-2">Show</span>
                   <select 
-                    className="form-select form-select-sm mx-2 d-inline-block" 
+                    className="form-select form-select-sm" 
                     style={{ width: 'auto' }}
-                    value={pageSize}
-                    onChange={handlePageSizeChange}
+                    value={gamesPerPage}
+                    onChange={(e) => handleItemsPerPageChange(e.target.value)}
                   >
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
+                    {itemsPerPageOptions.map(option => (
+                      <option key={option} value={option}>{option}</option>
+                    ))}
                   </select>
-                  entries
+                  <span className="ms-2">items</span>
                 </div>
-                <div className="pagination-info">
-                  Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, games.length)} of {games.length} entries
-                </div>
+              </div>
+              <div className="card-body">
+                {loading ? (
+                  <div className="text-center">Loading games...</div>
+                ) : error ? (
+                  <div className="alert alert-danger">{error}</div>
+                ) : games.length === 0 ? (
+                  <div className="text-center">No games in database</div>
+                ) : (
+                  <>
+                    <div className="table-responsive">
+                      <table className="table table-striped">
+                        <thead>
+                          <tr>
+                            <th style={{ width: '46px' }}></th>
+                            <th style={{ width: 'auto' }}>Title</th>
+                            <th style={{ whiteSpace: 'nowrap', width: 'auto' }}>Information</th>
+                            <th style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>Loose</th>
+                            <th style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>CIB</th>
+                            <th style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>New</th>
+                            <th style={{ width: '80px', textAlign: 'center' }}>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {games.map(game => (
+                            <tr key={game.id}>
+                              <td style={{ width: '46px', padding: 0 }}>
+                                {game.coverUrl ? (
+                                  <img 
+                                    src={game.coverUrl} 
+                                    alt={game.title}
+                                    style={{ 
+                                      width: '46px',
+                                      height: '60px',
+                                      objectFit: 'cover',
+                                      display: 'block'
+                                    }}
+                                  />
+                                ) : (
+                                  <div style={{ 
+                                    width: '46px',
+                                    height: '60px',
+                                    background: '#f8f9fa',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    margin: 0
+                                  }}>
+                                    <Image size={24} className="text-muted" />
+                                  </div>
+                                )}
+                              </td>
+                              <td style={{ position: 'relative', paddingLeft: '8px', textAlign: 'left', width: 'fit-content' }}>
+                                <div style={{ 
+                                  fontSize: '13px',
+                                  marginBottom: '4px'
+                                }}>
+                                  {game.title}
+                                </div>
+                                <div style={{ 
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '8px'
+                                }}>
+                                  {game.ratingId ? (
+                                    <div style={{ height: '14px' }}>
+                                      <RatingIcon rating={getRatingInfo(game.ratingId)} />
+                                    </div>
+                                  ) : (
+                                    <span className="badge bg-secondary">
+                                      {game.regionId === 1 ? 'PAL' : 'NTSC'}
+                                    </span>
+                                  )}
+                                  {Boolean(game.isKinect) && (
+                                    <img 
+                                      src="/logos/kinect.webp" 
+                                      alt="Kinect Game"
+                                      style={{ height: '14px' }}
+                                    />
+                                  )}
+                                </div>
+                              </td>
+                              <td style={{ whiteSpace: 'nowrap', width: 'fit-content' }}>
+                                <small>
+                                  <div>{game.releaseYear || '-'} / {game.genre || '-'}</div>
+                                  <div>Developer: {game.developer || '-'}</div>
+                                  <div>Publisher: {game.publisher || '-'}</div>
+                                </small>
+                              </td>
+                              <td style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>
+                                <small>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>USD:</span>
+                                    <span>$<strong>{formatPrice(game.Loose_USD)}</strong></span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>NOK:</span>
+                                    <span><strong>{formatNOKPrice(game.Loose_NOK)}</strong></span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>FIXED:</span>
+                                    <span><strong>{formatNOKPrice(game.Loose_NOK2)}</strong></span>
+                                  </div>
+                                </small>
+                              </td>
+                              <td style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>
+                                <small>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>USD:</span>
+                                    <span>$<strong>{formatPrice(game.CIB_USD)}</strong></span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>NOK:</span>
+                                    <span><strong>{formatNOKPrice(game.CIB_NOK)}</strong></span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>FIXED:</span>
+                                    <span><strong>{formatNOKPrice(game.CIB_NOK2)}</strong></span>
+                                  </div>
+                                </small>
+                              </td>
+                              <td style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>
+                                <small>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>USD:</span>
+                                    <span>$<strong>{formatPrice(game.NEW_USD)}</strong></span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>NOK:</span>
+                                    <span><strong>{formatNOKPrice(game.NEW_NOK)}</strong></span>
+                                  </div>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <span>FIXED:</span>
+                                    <span><strong>{formatNOKPrice(game.NEW_NOK2)}</strong></span>
+                                  </div>
+                                </small>
+                              </td>
+                              <td>
+                                <div className="d-flex gap-2 justify-content-center">
+                                  <Edit2 
+                                    size={14} 
+                                    className="text-primary cursor-pointer" 
+                                    onClick={() => {/* handle edit */}}
+                                    style={{ cursor: 'pointer' }}
+                                  />
+                                  <Trash2 
+                                    size={14} 
+                                    className={`text-danger ${collectionGames.includes(game.id) ? 'opacity-50' : 'cursor-pointer'}`}
+                                    onClick={() => !collectionGames.includes(game.id) && handleDelete(game.id)}
+                                    style={{ 
+                                      cursor: collectionGames.includes(game.id) ? 'not-allowed' : 'pointer'
+                                    }}
+                                  />
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    <PaginationControls />
+                  </>
+                )}
               </div>
             </div>
-            
-            <ResponsiveTable 
-              columns={[
-                { 
-                  header: 'Title', 
-                  key: 'title',
-                  render: (game) => game.pricechartingUrl ? (
-                    <a href={game.pricechartingUrl} target="_blank" rel="noopener noreferrer">
-                      {game.title}
-                    </a>
-                  ) : game.title
-                },
-                { 
-                  header: 'Console', 
-                  key: 'console', 
-                  width: '100px',
-                  render: (game) => consoles.find(c => c.id === game.consoleId)?.name 
-                },
-                { 
-                  header: 'Region', 
-                  key: 'region',
-                  width: '80px',
-                  render: (game) => (
-                    <div className="d-flex align-items-center justify-content-between">
-                      <span style={{ minWidth: '35px' }}>{regions.find(r => r.id === game.regionId)?.name}</span>
-                      <div style={{ 
-                        height: '16px',
-                        marginLeft: '4px',
-                        display: 'flex',
-                        alignItems: 'center' 
-                      }}>
-                        <RatingIcon rating={game.rating} />
-                      </div>
-                    </div>
-                  )
-                },
-                { 
-                  header: 'Prices',
-                  key: 'prices-group-start',
-                  width: '80px',
-                  className: 'text-center price-column price-column-start',
-                  render: (game) => (
-                    <div className="text-center">
-                      {game.Pricecharting_Loose ? `$${game.Pricecharting_Loose}` : '-'}
-                    </div>
-                  )
-                },
-                { 
-                  header: 'CIB', 
-                  key: 'cib', 
-                  width: '80px',
-                  className: 'text-center price-column',
-                  render: (game) => (
-                    <div className="text-center">
-                      {game.Pricecharting_Complete ? `$${game.Pricecharting_Complete}` : '-'}
-                    </div>
-                  )
-                },
-                { 
-                  header: 'New', 
-                  key: 'new', 
-                  width: '80px',
-                  className: 'text-center price-column',
-                  render: (game) => (
-                    <div className="text-center">
-                      {game.Pricecharting_New ? `$${game.Pricecharting_New}` : '-'}
-                    </div>
-                  )
-                },
-                { 
-                  header: 'Box', 
-                  key: 'box', 
-                  width: '80px',
-                  className: 'text-center price-column',
-                  render: (game) => (
-                    <div className="text-center">
-                      {game.Pricecharting_BoxOnly ? `$${game.Pricecharting_BoxOnly}` : '-'}
-                    </div>
-                  )
-                },
-                { 
-                  header: 'Manual', 
-                  key: 'manual', 
-                  width: '80px',
-                  className: 'text-center price-column price-column-end',
-                  render: (game) => (
-                    <div className="text-center">
-                      {game.Pricecharting_ManualOnly ? `$${game.Pricecharting_ManualOnly}` : '-'}
-                    </div>
-                  )
-                },
-                { 
-                  header: '',
-                  key: 'actions',
-                  width: '32px',
-                  padding: '4px',
-                  render: (game) => {
-                    const inCollection = isGameInCollection(game.id);
-                    return (
-                      <div style={{ 
-                        width: '32px', 
-                        display: 'flex', 
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        padding: '0 8px'
-                      }}>
-                        <Trash2 
-                          size={14} 
-                          className={`${inCollection ? 'text-muted' : 'text-danger'} cursor-pointer`}
-                          onClick={() => !inCollection && handleDeleteGame(game.id, game.title)}
-                          style={{ 
-                            opacity: loading || inCollection ? 0.5 : 1,
-                            cursor: inCollection ? 'not-allowed' : (loading ? 'wait' : 'pointer')
-                          }}
-                          title={inCollection ? 'Cannot delete - Game is in collection' : 'Delete game'}
-                        />
-                      </div>
-                    );
-                  }
-                }
-              ]}
-              data={getPaginatedData(games)}
-              isMobile={window.innerWidth <= 1024}
-              emptyMessage={loading ? 'Loading games...' : 'No games in database'}
-              style={{ 
-                fontSize: '0.875rem',
-                lineHeight: '1.2'
-              }}
-            />
-
-            {games.length > pageSize && (
-              <div className="d-flex justify-content-center mt-3">
-                <nav aria-label="Table navigation">
-                  <ul className="pagination">
-                    <li className={`page-item ${currentPage === 1 ? 'disabled' : ''}`}>
-                      <button 
-                        className="page-link" 
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
-                        Previous
-                      </button>
-                    </li>
-                    
-                    {getPaginationRange(currentPage, Math.ceil(games.length / pageSize)).map((page, index) => (
-                      <li 
-                        key={index} 
-                        className={`page-item ${currentPage === page ? 'active' : ''} ${page === '...' ? 'disabled' : ''}`}
-                      >
-                        <button 
-                          className="page-link" 
-                          onClick={() => page !== '...' && handlePageChange(page)}
-                          disabled={page === '...'}
-                        >
-                          {page}
-                        </button>
-                      </li>
-                    ))}
-
-                    <li className={`page-item ${currentPage === Math.ceil(games.length / pageSize) ? 'disabled' : ''}`}>
-                      <button 
-                        className="page-link" 
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        disabled={currentPage === Math.ceil(games.length / pageSize)}
-                      >
-                        Next
-                      </button>
-                    </li>
-                  </ul>
-                </nav>
-              </div>
-            )}
           </div>
         </div>
       </div>
+
+      <style>
+        {`
+          .prices-column {
+            font-size: 0.75rem;
+            line-height: 1.2;
+            text-align: left;
+            width: fit-content;
+          }
+          .price-row > small > div {
+            white-space: nowrap;
+            color: #666;
+            text-align: left;
+          }
+          .table th {
+            padding: 0.75rem;
+            height: auto;
+            white-space: nowrap;
+            vertical-align: middle;
+          }
+          .table td {
+            padding: 0.5rem;
+            vertical-align: middle;
+            max-height: 60px;
+            overflow: hidden;
+          }
+          .table tr {
+            max-height: 60px;
+            height: 60px;
+          }
+          .table td:first-child {
+            padding: 0 !important;
+          }
+          .table td > div {
+            max-height: 60px;
+            overflow: hidden;
+          }
+          /* Add styles for price column grouping */
+          .table th:nth-child(4),
+          .table td:nth-child(4) {
+            background-color: #f8f9fa;
+            border-left: 1px solid #dee2e6;
+          }
+          .table th:nth-child(6),
+          .table td:nth-child(6) {
+            background-color: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+          }
+          .table th:nth-child(5),
+          .table td:nth-child(5) {
+            background-color: #f8f9fa;
+          }
+          /* Add a subtle header style for the price group */
+          .table thead th:nth-child(4),
+          .table thead th:nth-child(5),
+          .table thead th:nth-child(6) {
+            background-color: #f1f3f5;
+            border-bottom: 2px solid #dee2e6;
+          }
+          /* Exclude header row from fixed height */
+          .table thead tr {
+            height: auto;
+            max-height: none;
+          }
+        `}
+      </style>
     </div>
   );
 };
