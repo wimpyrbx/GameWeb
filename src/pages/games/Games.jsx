@@ -22,6 +22,7 @@ const Games = () => {
   const [selectedGame, setSelectedGame] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [regions, setRegions] = useState([]);
+  const [savedGameId, setSavedGameId] = useState(null);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -162,12 +163,21 @@ const Games = () => {
 
       if (!response.ok) throw new Error('Failed to update game');
 
-      loadGames(currentPage);
+      setGames(prevGames =>
+        prevGames.map(game =>
+          game.id === updatedGame.id ? { ...game, ...updatedGame } : game
+        )
+      );
+
+      setSavedGameId(updatedGame.id);
+      setTimeout(() => {
+        setSavedGameId(null);
+      }, 1000);
+
       setShowEditModal(false);
       setSelectedGame(null);
     } catch (error) {
       console.error('Error updating game:', error);
-      // You might want to show an error message to the user here
     }
   };
 
@@ -296,7 +306,7 @@ const Games = () => {
                               key={game.id} 
                               onClick={() => handleEdit(game)}
                               style={{ cursor: 'pointer' }}
-                              className="hover-highlight"
+                              className={`hover-highlight ${savedGameId === game.id ? 'saved-highlight' : ''}`}
                             >
                               <td style={{ width: '46px', padding: 0 }}>
                                 {game.coverUrl ? (
@@ -517,6 +527,18 @@ const Games = () => {
           }
           .hover-highlight:hover {
             background-color: rgba(0,0,0,0.05);
+          }
+          .saved-highlight {
+            animation: saveFlash 1s ease;
+          }
+
+          @keyframes saveFlash {
+            0% {
+              background-color: rgba(40, 167, 69, 0.2);
+            }
+            100% {
+              background-color: transparent;
+            }
           }
         `}
       </style>

@@ -174,39 +174,21 @@ const Dashboard = () => {
   const handleModalSave = async (formData) => {
     try {
       setLoading(true);
-      let updatedItem;
 
-      if (modalData.isAdd) {
-        const newItem = {
-          ...formData,
-          gameId: modalData.game.id,
-          consoleId: modalData.game.consoleId,
-          regionId: modalData.game.regionId,
-          addedDate: new Date().toISOString()
-        };
-        await collectionDB.addCollectionItem(newItem);
-        updatedItem = newItem;
-      } else {
-        await collectionDB.updateCollectionItem(modalData.existingItem.id, {
-          ...formData,
-          gameId: modalData.game.id,
-          consoleId: modalData.game.consoleId,
-          regionId: modalData.game.regionId
-        });
-        updatedItem = { ...modalData.existingItem, ...formData };
-      }
+      // Update the game in the database
+      await gamesDB.updateGame(formData.id, formData);
 
-      setCollection(prevCollection => 
-        prevCollection.map(item => 
-          item.id === updatedItem.id ? { ...item, ...updatedItem } : item
+      // Update the game in the state
+      setGames(prevGames =>
+        prevGames.map(game =>
+          game.id === formData.id ? { ...game, ...formData } : game
         )
       );
 
       setModalData({ isOpen: false, game: null, existingItem: null, isAdd: false });
-      setSelectedGame(null);
-      setSuccess(`Successfully ${modalData.isAdd ? 'added' : 'updated'} game in collection`);
+      setSuccess('Game updated successfully');
     } catch (error) {
-      setError(`Failed to ${modalData.isAdd ? 'add' : 'update'} collection item: ${error.message}`);
+      setError('Failed to update game: ' + error.message);
     } finally {
       setLoading(false);
     }

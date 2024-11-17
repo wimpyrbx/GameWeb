@@ -184,20 +184,31 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
     }));
   };
 
+  const handleOverlayClick = (e) => {
+    // Only close if clicking the overlay itself, not its children
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   if (!show || !formData) return null;
 
   return (
-    <div className="modal" style={{ 
-      display: 'block', 
-      backgroundColor: 'rgba(0,0,0,0.5)',
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      zIndex: 1050,
-      overflow: 'auto'
-    }}>
+    <div 
+      className="modal" 
+      style={{ 
+        display: 'block', 
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        zIndex: 1050,
+        overflow: 'auto'
+      }}
+      onClick={handleOverlayClick}
+    >
       <div style={{ 
         position: 'relative',
         width: '80%',
