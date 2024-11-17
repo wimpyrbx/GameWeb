@@ -23,6 +23,7 @@ const Games = () => {
   const [showEditModal, setShowEditModal] = useState(false);
   const [regions, setRegions] = useState([]);
   const [savedGameId, setSavedGameId] = useState(null);
+  const [totalGames, setTotalGames] = useState(0);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -71,6 +72,7 @@ const Games = () => {
       setConsoles(consolesData);
       setCollectionGames(collectionData.map(game => game.gameId));
       setTotalPages(gamesData.pagination.totalPages);
+      setTotalGames(gamesData.pagination.total);
       setCurrentPage(page);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -172,7 +174,7 @@ const Games = () => {
       setSavedGameId(updatedGame.id);
       setTimeout(() => {
         setSavedGameId(null);
-      }, 1000);
+      }, 2000);
 
       setShowEditModal(false);
       setSelectedGame(null);
@@ -224,11 +226,11 @@ const Games = () => {
   return (
     <div className="content-wrapper">
       <div className="content-body">
-        <div className="row">
-          <div className="col-md-6">
+        <div className="row g-0">
+          <div className="col-md-3 pe-3">
             <ImportGames onImportComplete={handleGameAdded} />
           </div>
-          <div className="col-md-6">
+          <div className="col-md-9">
             <AddGameManual onGameAdded={handleGameAdded} />
           </div>
         </div>
@@ -237,7 +239,7 @@ const Games = () => {
           <div className="col-12">
             <div className="card">
               <div className="card-header d-flex justify-content-between align-items-center">
-                <h3>Games Database ({games.length} Games)</h3>
+                <h3>Games Database ({totalGames} Games)</h3>
                 <Select
                   value={{ value: gamesPerPage, label: `${gamesPerPage} items` }}
                   onChange={(option) => handleItemsPerPageChange(option.value)}
@@ -529,7 +531,7 @@ const Games = () => {
             background-color: rgba(0,0,0,0.05);
           }
           .saved-highlight {
-            animation: saveFlash 1s ease;
+            animation: saveFlash 2s ease;
           }
 
           @keyframes saveFlash {

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import ToggleSwitch from '../ui/ToggleSwitch';
+import { Image } from 'lucide-react';
 
 const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show }) => {
   const [formData, setFormData] = useState(null);
@@ -218,173 +219,211 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
         borderRadius: '8px',
         overflow: 'hidden'
       }}>
-        <div className="modal-header">
-          <h5 className="modal-title">Edit Game: {formData.title}</h5>
-          <button type="button" className="close" onClick={onClose}>
+        <div className="modal-header" style={{
+          backgroundColor: '#1e2531',
+          color: '#fff',
+          borderBottom: '1px solid #2d3446'
+        }}>
+          <h5 className="modal-title">
+            Editing <i>{consoles.find(c => c.id === formData.consoleId)?.name}</i> » <i>{formData.title}</i>
+          </h5>
+          <button 
+            type="button" 
+            className="close" 
+            onClick={onClose}
+            style={{ color: '#fff' }}
+          >
             <span>&times;</span>
           </button>
         </div>
         <div className="modal-body">
           <form onSubmit={handleSubmit}>
             <div className="row">
-              <div className="col-md-3">
-                <div className="text-center mb-3">
-                  {formData.coverUrl ? (
-                    <img 
-                      src={formData.coverUrl} 
-                      alt={formData.title}
-                      style={{ 
-                        width: '100%',
-                        maxHeight: '300px',
-                        objectFit: 'contain'
-                      }}
-                    />
-                  ) : (
-                    <div 
-                      className="text-muted" 
-                      style={{
-                        border: '2px dashed #dee2e6',
-                        borderRadius: '8px',
-                        padding: '2rem',
-                        backgroundColor: '#f8f9fa',
-                        minHeight: '200px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
-                      No cover image available
-                    </div>
-                  )}
-                </div>
+              <div className="col-md-2">
+                {formData.coverUrl ? (
+                  <img 
+                    src={formData.coverUrl} 
+                    alt={formData.title}
+                    style={{ 
+                      width: '100%',
+                      height: 'auto',
+                      maxHeight: '300px',
+                      objectFit: 'contain',
+                      display: 'block',
+                      margin: '0 auto',
+                      borderRadius: '8px'
+                    }}
+                  />
+                ) : (
+                  <div 
+                    className="text-muted" 
+                    style={{
+                      border: '2px dashed #dee2e6',
+                      borderRadius: '8px',
+                      padding: '2rem',
+                      backgroundColor: '#f8f9fa',
+                      minHeight: '200px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      flexDirection: 'column',
+                      gap: '1rem'
+                    }}
+                  >
+                    <Image size={48} className="text-muted" />
+                    <span>No cover image available</span>
+                  </div>
+                )}
               </div>
-              <div className="col-md-9">
+              <div className="col-md-10">
                 <div className="row mb-3" style={{ borderBottom: '1px solid #dee2e6', paddingBottom: '1rem' }}>
-                  <div className="col-md-8">
-                    <label className="form-label">Title</label>
-                    <input
-                      type="text"
-                      className={`form-control ${validationErrors.title ? 'is-invalid' : ''}`}
-                      name="title"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      style={{ width: '100%' }}
-                    />
-                  </div>
-                  <div className="col-md-4">
-                    <label className="form-label">Console</label>
-                    <Select
-                      value={consoles.find(c => c.id === formData.consoleId)}
-                      onChange={(option) => setFormData(prev => ({
-                        ...prev,
-                        consoleId: option ? option.id : null
-                      }))}
-                      options={consoles}
-                      getOptionLabel={option => option.name}
-                      getOptionValue={option => option.id}
-                      placeholder="Select Console..."
-                      styles={{
-                        control: (base, state) => ({
-                          ...base,
-                          borderColor: validationErrors.consoleId ? '#dc3545' : base.borderColor,
-                          '&:hover': {
-                            borderColor: validationErrors.consoleId ? '#dc3545' : base['&:hover'].borderColor
-                          }
-                        })
-                      }}
-                    />
+                  <div className="col-12">
+                    <div className="d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '60px', minWidth: '60px' }}>Title</label>
+                      <input
+                        type="text"
+                        className={`form-control ${validationErrors.title ? 'is-invalid' : ''}`}
+                        name="title"
+                        value={formData.title}
+                        onChange={handleInputChange}
+                        style={{ width: '100%' }}
+                      />
+                    </div>
                   </div>
                 </div>
                 <div className="row mb-3" style={{ borderBottom: '1px solid #dee2e6', paddingBottom: '1rem' }}>
+                  <div className="col-md-4">
+                    <div className="d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '70px', minWidth: '70px' }}>Console</label>
+                      <Select
+                        value={consoles.find(c => c.id === formData.consoleId)}
+                        onChange={(option) => setFormData(prev => ({
+                          ...prev,
+                          consoleId: option ? option.id : null
+                        }))}
+                        options={consoles}
+                        getOptionLabel={option => option.name}
+                        getOptionValue={option => option.id}
+                        placeholder="Select Console..."
+                        className="flex-grow-1"
+                        styles={{
+                          control: (base, state) => ({
+                            ...base,
+                            borderColor: validationErrors.consoleId ? '#dc3545' : base.borderColor,
+                            '&:hover': {
+                              borderColor: validationErrors.consoleId ? '#dc3545' : base['&:hover'].borderColor
+                            }
+                          })
+                        }}
+                      />
+                    </div>
+                  </div>
                   <div className="col-md-2">
-                    <label className="form-label">Year</label>
-                    <input
-                      type="text"
-                      className={`form-control ${validationErrors.releaseYear ? 'is-invalid' : ''}`}
-                      name="releaseYear"
-                      value={formData.releaseYear}
-                      onChange={handleInputChange}
-                      placeholder="YYYY"
-                      maxLength="4"
-                      style={{ backgroundImage: 'none' }}
-                    />
+                    <div className="d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '45px', minWidth: '45px' }}>Year</label>
+                      <input
+                        type="text"
+                        className={`form-control ${validationErrors.releaseYear ? 'is-invalid' : ''}`}
+                        name="releaseYear"
+                        value={formData.releaseYear}
+                        onChange={handleInputChange}
+                        placeholder="YYYY"
+                        maxLength="4"
+                        style={{ backgroundImage: 'none' }}
+                      />
+                    </div>
                   </div>
-                  <div className="col-md-5">
-                    <label className="form-label">Region</label>
-                    <Select
-                      value={regions.find(r => r.id === formData.regionId)}
-                      onChange={handleRegionChange}
-                      options={regions}
-                      getOptionLabel={option => option.name}
-                      getOptionValue={option => option.id}
-                      isClearable
-                      placeholder="Select Region..."
-                    />
+                  <div className="col-md-3">
+                    <div className="d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '60px', minWidth: '60px' }}>Region</label>
+                      <Select
+                        value={regions.find(r => r.id === formData.regionId)}
+                        onChange={handleRegionChange}
+                        options={regions}
+                        getOptionLabel={option => option.name}
+                        getOptionValue={option => option.id}
+                        isClearable
+                        placeholder="Select Region..."
+                        className="flex-grow-1"
+                      />
+                    </div>
                   </div>
-                  <div className="col-md-5">
-                    <label className="form-label">Rating</label>
-                    <Select
-                      value={getCurrentRatingOption()}
-                      onChange={handleRatingChange}
-                      options={formatRatingOptions(availableRatings)}
-                      isDisabled={!formData.regionId}
-                      isClearable
-                      placeholder="Select Rating..."
-                      noOptionsMessage={() => formData.regionId ? "No ratings available" : "Select a region first"}
-                      styles={{
-                        control: (base) => ({
-                          ...base,
-                          minHeight: '38px'
-                        }),
-                        groupHeading: (base) => ({
-                          ...base,
-                          color: '#666',
-                          fontSize: '0.85em',
-                          fontWeight: 600,
-                          textTransform: 'none',
-                          padding: '4px 12px',
-                          backgroundColor: '#f8f9fa'
-                        }),
-                        option: (base, state) => ({
-                          ...base,
-                          fontSize: '0.9em',
-                          padding: '4px 12px',
-                          backgroundColor: state.isFocused ? '#e9ecef' : base.backgroundColor,
-                          color: '#333'
-                        })
-                      }}
-                    />
+                  <div className="col-md-3">
+                    <div className="d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '60px', minWidth: '60px' }}>Rating</label>
+                      <Select
+                        value={getCurrentRatingOption()}
+                        onChange={handleRatingChange}
+                        options={formatRatingOptions(availableRatings)}
+                        isDisabled={!formData.regionId}
+                        isClearable
+                        placeholder="Select Rating..."
+                        noOptionsMessage={() => formData.regionId ? "No ratings available" : "Select a region first"}
+                        className="flex-grow-1"
+                        styles={{
+                          control: (base) => ({
+                            ...base,
+                            minHeight: '38px'
+                          }),
+                          groupHeading: (base) => ({
+                            ...base,
+                            color: '#666',
+                            fontSize: '0.85em',
+                            fontWeight: 600,
+                            textTransform: 'none',
+                            padding: '4px 12px',
+                            backgroundColor: '#f8f9fa'
+                          }),
+                          option: (base, state) => ({
+                            ...base,
+                            fontSize: '0.9em',
+                            padding: '4px 12px',
+                            backgroundColor: state.isFocused ? '#e9ecef' : base.backgroundColor,
+                            color: '#333'
+                          })
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="row mb-3" style={{ borderBottom: '1px solid #dee2e6', paddingBottom: '1rem' }}>
+                <div className="row mb-3">
                   <div className="col-md-6">
-                    <input
-                      type="text"
-                      className="form-control mb-3"
-                      name="developer"
-                      value={formData.developer}
-                      onChange={handleInputChange}
-                      placeholder="Developer"
-                    />
-                    <input
-                      type="text"
-                      className="form-control mb-3"
-                      name="publisher"
-                      value={formData.publisher}
-                      onChange={handleInputChange}
-                      placeholder="Publisher"
-                    />
-                    <input
-                      type="text"
-                      className="form-control"
-                      name="genre"
-                      value={formData.genre}
-                      onChange={handleInputChange}
-                      placeholder="Genre"
-                    />
+                    <div className="mb-3 d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '80px', minWidth: '80px' }}>Developer</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="developer"
+                        value={formData.developer}
+                        onChange={handleInputChange}
+                        placeholder="Developer"
+                      />
+                    </div>
+                    <div className="mb-3 d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '80px', minWidth: '80px' }}>Publisher</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="publisher"
+                        value={formData.publisher}
+                        onChange={handleInputChange}
+                        placeholder="Publisher"
+                      />
+                    </div>
+                    <div className="d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '80px', minWidth: '80px' }}>Genre</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        name="genre"
+                        value={formData.genre}
+                        onChange={handleInputChange}
+                        placeholder="Genre"
+                      />
+                    </div>
                   </div>
-                  <div className="col-md-6">
+                  <div className="col-md-4">
                     <div className="d-flex flex-column gap-3">
                       <ToggleSwitch
                         id="isKinect"
@@ -408,36 +447,35 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
                   </div>
                 </div>
 
-                <div className="row mb-3" style={{ borderBottom: '1px solid #dee2e6', paddingBottom: '1rem' }}>
-                  <div className="col-12">
-                    <label className="form-label">PriceCharting URL</label>
-                    <input
-                      type="url"
-                      className={`form-control ${validationErrors.pricechartingUrl ? 'is-invalid' : ''}`}
-                      name="pricechartingUrl"
-                      value={formData.pricechartingUrl || ''}
-                      onChange={handleInputChange}
-                      placeholder="https://www.pricecharting.com/game/..."
-                      style={{ backgroundImage: 'none' }}
-                    />
-                  </div>
-                </div>
-
                 <div className="row mb-3">
                   <div className="col-12">
-                    <label className="form-label">Cover URL</label>
-                    <input
-                      type="url"
-                      className="form-control"
-                      name="coverUrl"
-                      value={formData.coverUrl || ''}
-                      onChange={handleInputChange}
-                      placeholder="https://..."
-                    />
+                    <div className="mb-3 d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '100px', minWidth: '100px' }}>Pricecharting</label>
+                      <input
+                        type="url"
+                        className={`form-control ${validationErrors.pricechartingUrl ? 'is-invalid' : ''}`}
+                        name="pricechartingUrl"
+                        value={formData.pricechartingUrl || ''}
+                        onChange={handleInputChange}
+                        placeholder="https://www.pricecharting.com/game/..."
+                        style={{ backgroundImage: 'none' }}
+                      />
+                    </div>
+                    <div className="d-flex align-items-center">
+                      <label className="form-label mb-0 me-4" style={{ width: '100px', minWidth: '100px' }}>Cover</label>
+                      <input
+                        type="url"
+                        className="form-control"
+                        name="coverUrl"
+                        value={formData.coverUrl || ''}
+                        onChange={handleInputChange}
+                        placeholder="https://..."
+                      />
+                    </div>
                   </div>
                 </div>
 
-                <div className="modal-footer px-0">
+                <div className="modal-footer px-0 pt-3 pb-0">
                   <button type="button" className="btn btn-secondary" onClick={onClose}>
                     Cancel
                   </button>

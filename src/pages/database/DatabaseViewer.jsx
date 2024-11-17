@@ -94,123 +94,125 @@ const DatabaseViewer = () => {
   };
 
   return (
-    <div>
-      <h2>Database Viewer</h2>
-      {error && <div className="alert alert-danger">{error}</div>}
-      <div className="row mb-4">
-        <div className="col-md-3">
-          <div className="card h-100">
-            <div className="card-header">
-              <h3 className="card-title">Tables</h3>
-            </div>
-            <div className="card-body p-0">
-              <div className="list-group list-group-flush">
-                {tables.map(table => (
-                  <button
-                    key={table}
-                    className={`list-group-item list-group-item-action d-flex align-items-center ${selectedTable === table ? 'active' : ''}`}
-                    onClick={() => setSelectedTable(table)}
-                  >
-                    <TableIcon size={16} className="me-3" />
-                    {table}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="col-md-9">
-          {selectedTable && (
+    <div className="content-wrapper">
+      <div className="content-body">
+        <h2>Database Viewer</h2>
+        {error && <div className="alert alert-danger">{error}</div>}
+        <div className="row mb-4">
+          <div className="col-md-3">
             <div className="card h-100">
               <div className="card-header">
-                <h3 className="card-title">Table Schema: {selectedTable}</h3>
+                <h3 className="card-title">Tables</h3>
               </div>
-              <div className="card-body">
-                <table className="table table-bordered">
-                  <thead>
-                    <tr>
-                      <th>#</th>
-                      <th>Name</th>
-                      <th>Type</th>
-                      <th>Not Null</th>
-                      <th>Default Value</th>
-                      <th>Primary Key</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {schema.map((column, index) => (
-                      <tr key={column.cid}>
-                        <td>{index + 1}</td>
-                        <td>{column.name}</td>
-                        <td>{column.type}</td>
-                        <td>{column.notnull ? 'Yes' : 'No'}</td>
-                        <td>{column.dflt_value || 'None'}</td>
-                        <td>{column.pk ? 'Yes' : 'No'}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {selectedTable && (
-        <div className="row">
-          <div className="col-12">
-            <div className="card">
-              <div className="card-header d-flex justify-content-between align-items-center">
-                <h3 className="card-title">Table Data: {selectedTable}</h3>
-                <span className="badge bg-info text-white">
-                  Showing {data.length} entries
-                </span>
-              </div>
-              <div className="card-body table-card-body">
-                <div className="table-container">
-                  {loading ? (
-                    <div className="text-center p-4">Loading...</div>
-                  ) : data.length === 0 ? (
-                    <div className="text-center p-4">No data available</div>
-                  ) : (
-                    <div className="table-wrapper">
-                      <table className="table table-bordered table-hover">
-                        <thead>
-                          <tr style={{ fontSize: calculateFontSize(getColumnHeaders(data).length) }}>
-                            {getColumnHeaders(data).map((header, index) => (
-                              <th key={index}>
-                                {header}
-                              </th>
-                            ))}
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {data.map((row, rowIndex) => (
-                            <tr 
-                              key={rowIndex}
-                              style={{ fontSize: calculateFontSize(getColumnHeaders(data).length) }}
-                            >
-                              {getColumnHeaders(data).map((column, colIndex) => (
-                                <td
-                                  key={colIndex}
-                                  title={row[column]?.toString() || ''}
-                                >
-                                  {truncateText(row[column], 30)}
-                                </td>
-                              ))}
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  )}
+              <div className="card-body p-0">
+                <div className="list-group list-group-flush">
+                  {tables.map(table => (
+                    <button
+                      key={table}
+                      className={`list-group-item list-group-item-action d-flex align-items-center ${selectedTable === table ? 'active' : ''}`}
+                      onClick={() => setSelectedTable(table)}
+                    >
+                      <TableIcon size={16} className="me-3" />
+                      {table}
+                    </button>
+                  ))}
                 </div>
               </div>
             </div>
           </div>
+
+          <div className="col-md-9">
+            {selectedTable && (
+              <div className="card h-100">
+                <div className="card-header">
+                  <h3 className="card-title">Table Schema: {selectedTable}</h3>
+                </div>
+                <div className="card-body">
+                  <table className="table table-bordered">
+                    <thead>
+                      <tr>
+                        <th>#</th>
+                        <th>Name</th>
+                        <th>Type</th>
+                        <th>Not Null</th>
+                        <th>Default Value</th>
+                        <th>Primary Key</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {schema.map((column, index) => (
+                        <tr key={column.cid}>
+                          <td>{index + 1}</td>
+                          <td>{column.name}</td>
+                          <td>{column.type}</td>
+                          <td>{column.notnull ? 'Yes' : 'No'}</td>
+                          <td>{column.dflt_value || 'None'}</td>
+                          <td>{column.pk ? 'Yes' : 'No'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+
+        {selectedTable && (
+          <div className="row">
+            <div className="col-12">
+              <div className="card">
+                <div className="card-header d-flex justify-content-between align-items-center">
+                  <h3 className="card-title">Table Data: {selectedTable}</h3>
+                  <span className="badge bg-info text-white">
+                    Showing {data.length} entries
+                  </span>
+                </div>
+                <div className="card-body table-card-body">
+                  <div className="table-container">
+                    {loading ? (
+                      <div className="text-center p-4">Loading...</div>
+                    ) : data.length === 0 ? (
+                      <div className="text-center p-4">No data available</div>
+                    ) : (
+                      <div className="table-wrapper">
+                        <table className="table table-bordered table-hover">
+                          <thead>
+                            <tr style={{ fontSize: calculateFontSize(getColumnHeaders(data).length) }}>
+                              {getColumnHeaders(data).map((header, index) => (
+                                <th key={index}>
+                                  {header}
+                                </th>
+                              ))}
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {data.map((row, rowIndex) => (
+                              <tr 
+                                key={rowIndex}
+                                style={{ fontSize: calculateFontSize(getColumnHeaders(data).length) }}
+                              >
+                                {getColumnHeaders(data).map((column, colIndex) => (
+                                  <td
+                                    key={colIndex}
+                                    title={row[column]?.toString() || ''}
+                                  >
+                                    {truncateText(row[column], 30)}
+                                  </td>
+                                ))}
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

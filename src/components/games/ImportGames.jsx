@@ -76,85 +76,77 @@ const ImportGames = ({ onImportComplete }) => {
   };
 
   return (
-    <div className="content-wrapper">
-      <div className="content-body">
-        <div className="card">
-          <div className="card-header">
-            <h3>Import Games</h3>
+    <div className="card">
+      <div className="card-header">
+        <h3>Import Games</h3>
+      </div>
+      <div className="card-body">
+        {error && (
+          <div className="alert alert-danger d-flex align-items-center" role="alert">
+            <AlertCircle size={20} className="me-2" />
+            <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{error}</pre>
           </div>
-          <div className="card-body">
-            {error && (
-              <div className="alert alert-danger d-flex align-items-center" role="alert">
-                <AlertCircle size={20} className="me-2" />
-                <pre style={{ margin: 0, whiteSpace: 'pre-wrap' }}>{error}</pre>
-              </div>
-            )}
-            
-            {success && (
-              <div className="alert alert-success d-flex align-items-center" role="alert">
-                <CheckCircle size={20} className="me-2" />
-                {success}
-              </div>
-            )}
+        )}
+        
+        {success && (
+          <div className="alert alert-success d-flex align-items-center" role="alert">
+            <CheckCircle size={20} className="me-2" />
+            {success}
+          </div>
+        )}
 
-            <div 
-              {...getRootProps()} 
-              className={`dropzone-area ${isDragActive ? 'active' : ''} ${selectedFile ? 'has-file' : ''}`}
-              style={{
-                border: '2px dashed #ccc',
-                borderRadius: '8px',
-                padding: '40px 20px',
-                textAlign: 'center',
-                cursor: 'pointer',
-                backgroundColor: isDragActive ? '#f8f9fa' : 'white',
-                transition: 'all 0.3s ease'
-              }}
-            >
-              <input {...getInputProps()} />
-              
-              <div className="d-flex flex-column align-items-center">
+        <div 
+          {...getRootProps()} 
+          className={`dropzone-area ${isDragActive ? 'active' : ''} ${selectedFile ? 'has-file' : ''}`}
+          style={{
+            border: '2px dashed #ccc',
+            borderRadius: '8px',
+            padding: '20px',
+            textAlign: 'center',
+            cursor: 'pointer',
+            backgroundColor: isDragActive ? '#f8f9fa' : 'white',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          <input {...getInputProps()} />
+          
+          <div className="d-flex flex-column align-items-center">
+            {isDragActive ? (
+              <p className="mb-0">Drop the file here...</p>
+            ) : selectedFile ? (
+              <div className="selected-file">
+                <FileText size={24} className="me-2" />
+                <span>{selectedFile.name}</span>
+              </div>
+            ) : (
+              <div>
                 <Upload 
-                  size={48} 
-                  className="mb-3" 
+                  size={48}
                   style={{ 
                     color: isDragActive ? '#0d6efd' : '#6c757d',
                     transition: 'color 0.3s ease'
                   }} 
                 />
-                
-                {isDragActive ? (
-                  <p className="mb-0">Drop the file here...</p>
-                ) : selectedFile ? (
-                  <div className="selected-file">
-                    <FileText size={24} className="me-2" />
-                    <span>{selectedFile.name}</span>
-                  </div>
-                ) : (
-                  <div>
-                    <p className="mb-1">Drag and drop your TSV file here</p>
-                    <p className="text-muted mb-0">or click to select a file</p>
-                  </div>
-                )}
               </div>
-            </div>
-
-            <div className="mt-4 text-center">
-              <button
-                className="btn btn-primary"
-                onClick={handleImport}
-                disabled={importing || !selectedFile}
-              >
-                {importing ? (
-                  <>
-                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                    Importing...
-                  </>
-                ) : (
-                  <>Import Games</>
-                )}
-              </button>
-            </div>
+            )}
           </div>
+        </div>
+
+        <div className="mt-3 text-center">
+          <button
+            className="btn btn-primary"
+            onClick={handleImport}
+            disabled={importing || !selectedFile}
+          >
+            {importing ? (
+              <>
+                <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Importing...
+              </>
+            ) : (
+              <>Import Games</>
+            )}
+          </button>
         </div>
       </div>
 
