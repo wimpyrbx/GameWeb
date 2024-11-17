@@ -41,7 +41,7 @@ body {
   margin: 0;
   padding: 0;
   transition: transform 0.3s ease;
-  z-index: 1040;
+  z-index: 1000;
 }
 
 .sidebar-header {
@@ -843,7 +843,7 @@ body {
 /* Add these styles for the search box */
 .search-box {
   min-width: 250px;
-  z-index: 1000;
+  z-index: 800;
   position: relative;
 }
 
@@ -1166,7 +1166,7 @@ body {
 div[class*="game-select__menu"] {
   position: absolute !important;
   width: 100%;
-  z-index: 99999 !important;
+  z-index: 901 !important;
   margin-top: 4px;
   background: white;
   border: 1px solid #dee2e6;
@@ -1191,7 +1191,7 @@ div[class*="game-select__menu"] {
 /* Ensure the dropdown container is above other elements */
 .game-select .game-select__control {
   position: relative;
-  z-index: 99999;
+  z-index: 902 !important;
 }
 
 /* Style the dropdown options */
@@ -1473,13 +1473,32 @@ div[class*="game-select__menu"] {
   z-index: 1055 !important;
 }
 
-/* Search box z-index */
+/* React Select z-index adjustments */
+.game-select {
+  z-index: 902 !important;
+}
+
+.game-select__menu {
+  z-index: 901 !important;
+}
+
+.game-select__dropdown-indicator,
+.game-select__indicators {
+  z-index: 902 !important;
+}
+
+/* Search box z-index - lower than game select */
 .search-box {
-  z-index: 1000;
+  z-index: 800 !important;
   position: relative;
 }
 
-/* Ensure sidebar stays above content but below modals */
+/* Ensure sidebar stays above regular content but below modals */
 .sidebar {
-  z-index: 1040;
+  z-index: 1000;
+}
+
+/* Add styles for dropdown menus */
+.dropdown-menu {
+  z-index: 899;
 }
