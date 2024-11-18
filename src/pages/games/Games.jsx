@@ -461,6 +461,13 @@ const Games = () => {
                                       style={{ height: '14px' }}
                                     />
                                   )}
+                                  {Boolean(game.isSpecial) && (
+                                    <img 
+                                      src="/logos/specials.webp" 
+                                      alt="Special Edition"
+                                      style={{ height: '14px' }}
+                                    />
+                                  )}
                                 </div>
                               </td>
                               <td style={{ whiteSpace: 'nowrap', width: 'fit-content' }}>

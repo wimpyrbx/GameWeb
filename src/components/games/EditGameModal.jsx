@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import ToggleSwitch from '../ui/ToggleSwitch';
-import { Image } from 'lucide-react';
+import { Image, Search, ExternalLink } from 'lucide-react';
 
 const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show }) => {
   const [formData, setFormData] = useState(null);
@@ -210,6 +210,12 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
     });
   };
 
+  const handleGoogleImageSearch = () => {
+    const consoleName = consoles.find(c => c.id === formData.consoleId)?.name || '';
+    const searchQuery = encodeURIComponent(`${consoleName} ${formData.title} cover`);
+    window.open(`https://www.google.com/search?q=${searchQuery}&tbm=isch`, '_blank');
+  };
+
   if (!show || !formData) return null;
 
   return (
@@ -259,38 +265,60 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
             <div className="row">
               <div className="col-md-2">
                 {formData.coverUrl ? (
-                  <img 
-                    src={formData.coverUrl} 
-                    alt={formData.title}
-                    style={{ 
-                      width: '100%',
-                      height: 'auto',
-                      maxHeight: '300px',
-                      objectFit: 'contain',
-                      display: 'block',
-                      margin: '0 auto',
-                      borderRadius: '8px'
-                    }}
-                  />
+                  <>
+                    <img 
+                      src={formData.coverUrl} 
+                      alt={formData.title}
+                      style={{ 
+                        width: '100%',
+                        height: 'auto',
+                        maxHeight: '300px',
+                        objectFit: 'contain',
+                        display: 'block',
+                        margin: '0 auto',
+                        borderRadius: '8px'
+                      }}
+                    />
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
+                      onClick={handleGoogleImageSearch}
+                      title="Search Google Images"
+                    >
+                      <Search size={16} />
+                      Find Cover
+                    </button>
+                  </>
                 ) : (
-                  <div 
-                    className="text-muted" 
-                    style={{
-                      border: '2px dashed #dee2e6',
-                      borderRadius: '8px',
-                      padding: '2rem',
-                      backgroundColor: '#f8f9fa',
-                      minHeight: '200px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flexDirection: 'column',
-                      gap: '1rem'
-                    }}
-                  >
-                    <Image size={48} className="text-muted" />
-                    <span>No cover image available</span>
-                  </div>
+                  <>
+                    <div 
+                      className="text-muted" 
+                      style={{
+                        border: '2px dashed #dee2e6',
+                        borderRadius: '8px',
+                        padding: '2rem',
+                        backgroundColor: '#f8f9fa',
+                        minHeight: '200px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        flexDirection: 'column',
+                        gap: '1rem'
+                      }}
+                    >
+                      <Image size={48} className="text-muted" />
+                      <span>No cover image available</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
+                      onClick={handleGoogleImageSearch}
+                      title="Search Google Images"
+                    >
+                      <Search size={16} />
+                      Find Cover
+                    </button>
+                  </>
                 )}
               </div>
               <div className="col-md-10">
@@ -468,7 +496,17 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
                 <div className="row mb-3">
                   <div className="col-12">
                     <div className="mb-3 d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '100px', minWidth: '100px' }}>Pricecharting</label>
+                      <label 
+                        className="form-label mb-0 me-4" 
+                        style={{ 
+                          width: '100px', 
+                          minWidth: '100px',
+                          cursor: formData.pricechartingUrl ? 'pointer' : 'default'
+                        }}
+                        onClick={() => formData.pricechartingUrl && window.open(formData.pricechartingUrl, '_blank')}
+                      >
+                        Pricecharting
+                      </label>
                       <input
                         type="url"
                         className={`form-control ${validationErrors.pricechartingUrl ? 'is-invalid' : ''}`}
