@@ -399,7 +399,6 @@ const Games = () => {
                             <th style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>Loose</th>
                             <th style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>CIB</th>
                             <th style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>New</th>
-                            <th style={{ whiteSpace: 'nowrap', width: '150px' }}>Added</th>
                             <th style={{ width: '80px', textAlign: 'center' }}>Actions</th>
                           </tr>
                         </thead>
@@ -493,6 +492,17 @@ const Games = () => {
                                   <div>{game.releaseYear || '-'} / {game.genre || '-'}</div>
                                   <div>Developer: {game.developer || '-'}</div>
                                   <div>Publisher: {game.publisher || '-'}</div>
+                                  <div className="text-muted mt-1" style={{ fontSize: '0.85em' }}>
+                                    Added: {new Date(game.created_at).toLocaleString('en-GB', {
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit',
+                                      second: '2-digit',
+                                      hour12: false
+                                    }).replace(',', ' (')} )
+                                  </div>
                                 </small>
                               </td>
                               <td style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>
@@ -542,9 +552,6 @@ const Games = () => {
                                     <span><strong>{formatNOKPrice(game.NEW_NOK2)}</strong></span>
                                   </div>
                                 </small>
-                              </td>
-                              <td>
-                                {new Date(game.created_at).toLocaleString()}
                               </td>
                               <td>
                                 <div className="d-flex gap-2 justify-content-center">

@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
 import ToggleSwitch from '../ui/ToggleSwitch';
 import { Image, Search, ExternalLink } from 'lucide-react';
+import RatingSelect from '../ui/RatingSelect';
+import RegionSelect from '../ui/RegionSelect';
 
 const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show }) => {
   const [formData, setFormData] = useState(null);
@@ -162,31 +164,6 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
     onSave(formData);
   };
 
-  // Add function to format ratings options
-  const formatRatingOptions = (ratings) => {
-    if (!ratings.length) return [{ 
-      label: 'NO RATING',
-      options: [{ label: 'No Rating Selected', value: null }]
-    }];
-
-    const groupedRatings = ratings.reduce((acc, rating) => {
-      if (!acc[rating.system]) {
-        acc[rating.system] = [];
-      }
-      acc[rating.system].push(rating);
-      return acc;
-    }, {});
-
-    return Object.entries(groupedRatings).map(([system, ratings]) => ({
-      label: system,
-      options: ratings.map(rating => ({
-        ...rating,
-        label: rating.name,
-        value: rating.id
-      }))
-    }));
-  };
-
   const handleOverlayClick = (e) => {
     // Only close if clicking the overlay itself, not its children
     if (e.target === e.currentTarget) {
@@ -214,6 +191,16 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
     const consoleName = consoles.find(c => c.id === formData.consoleId)?.name || '';
     const searchQuery = encodeURIComponent(`${consoleName} ${formData.title} cover`);
     window.open(`https://www.google.com/search?q=${searchQuery}&tbm=isch`, '_blank');
+  };
+
+  // Add this near the top of the component, before the return statement
+  const generateYearOptions = () => {
+    const currentYear = new Date().getFullYear();
+    const years = [];
+    for (let year = currentYear; year >= 1970; year--) {
+      years.push({ value: year.toString(), label: year.toString() });
+    }
+    return years;
   };
 
   if (!show || !formData) return null;
@@ -264,295 +251,346 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
           <form onSubmit={handleSubmit}>
             <div className="row">
               <div className="col-md-2">
-                {formData.coverUrl ? (
-                  <>
-                    <img 
-                      src={formData.coverUrl} 
-                      alt={formData.title}
-                      style={{ 
-                        width: '100%',
-                        height: 'auto',
-                        maxHeight: '300px',
-                        objectFit: 'contain',
-                        display: 'block',
-                        margin: '0 auto',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
-                      onClick={handleGoogleImageSearch}
-                      title="Search Google Images"
-                    >
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        width="24" 
-                        height="16" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
+                <div style={{ 
+                  backgroundColor: '#f8f9fa',
+                  border: '1px solid #dee2e6',
+                  borderRadius: '8px',
+                  padding: '1rem'
+                }}>
+                  {formData.coverUrl ? (
+                    <>
+                      <img 
+                        src={formData.coverUrl} 
+                        alt={formData.title}
+                        style={{ 
+                          width: '100%',
+                          height: 'auto',
+                          maxHeight: '300px',
+                          objectFit: 'contain',
+                          display: 'block',
+                          margin: '0 auto',
+                          borderRadius: '8px'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
+                        onClick={handleGoogleImageSearch}
+                        title="Search Google Images"
                       >
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.3-4.3"></path>
-                      </svg>
-                      Find Cover
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div 
-                      className="text-muted" 
-                      style={{
-                        border: '2px dashed #dee2e6',
-                        borderRadius: '8px',
-                        padding: '2rem',
-                        backgroundColor: '#f8f9fa',
-                        minHeight: '200px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        flexDirection: 'column',
-                        gap: '1rem'
-                      }}
-                    >
-                      <Image size={48} className="text-muted" />
-                      <span>No cover image available</span>
-                    </div>
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
-                      onClick={handleGoogleImageSearch}
-                      title="Search Google Images"
-                    >
-                      <svg 
-                        xmlns="http://www.w3.org/2000/svg" 
-                        width="24" 
-                        height="16" 
-                        viewBox="0 0 24 24" 
-                        fill="none" 
-                        stroke="currentColor" 
-                        strokeWidth="2" 
-                        strokeLinecap="round" 
-                        strokeLinejoin="round"
+                        <Search size={16} />
+                        Find Cover
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div 
+                        className="text-muted" 
+                        style={{
+                          border: '2px dashed #dee2e6',
+                          borderRadius: '8px',
+                          padding: '2rem',
+                          backgroundColor: '#fff',
+                          minHeight: '200px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexDirection: 'column',
+                          gap: '1rem'
+                        }}
                       >
-                        <circle cx="11" cy="11" r="8"></circle>
-                        <path d="m21 21-4.3-4.3"></path>
-                      </svg>
-                      Find Cover
-                    </button>
-                  </>
-                )}
+                        <Image size={48} className="text-muted" />
+                        <span>No cover image available</span>
+                      </div>
+                      <button
+                        type="button"
+                        className="btn btn-outline-secondary w-100 mt-2 d-flex align-items-center justify-content-center gap-2"
+                        onClick={handleGoogleImageSearch}
+                        title="Search Google Images"
+                      >
+                        <Search size={16} />
+                        Find Cover
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
               <div className="col-md-10">
-                <div className="row mb-3" style={{ borderBottom: '1px solid #dee2e6', paddingBottom: '1rem' }}>
+                <div className="row mb-3">
                   <div className="col-12">
-                    <div className="d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '60px', minWidth: '60px' }}>Title</label>
-                      <input
-                        type="text"
-                        className={`form-control ${validationErrors.title ? 'is-invalid' : ''}`}
-                        name="title"
-                        value={formData.title}
-                        onChange={handleInputChange}
-                        style={{ width: '100%' }}
-                      />
+                    <div style={{ 
+                      backgroundColor: '#f8f9fa',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '8px',
+                      padding: '1rem'
+                    }}>
+                      <div className="d-flex align-items-center">
+                        <div style={{ width: '250px' }}>
+                          <div className="d-flex align-items-center">
+                            <label className="form-label mb-0 me-2" style={{ width: '60px', minWidth: '60px' }}>Console</label>
+                            <Select
+                              value={consoles.find(c => c.id === formData.consoleId)}
+                              onChange={(option) => setFormData(prev => ({
+                                ...prev,
+                                consoleId: option ? option.id : null
+                              }))}
+                              options={consoles}
+                              getOptionLabel={option => option.name}
+                              getOptionValue={option => option.id}
+                              placeholder="Select Console..."
+                              className="flex-grow-1"
+                              styles={{
+                                control: (base, state) => ({
+                                  ...base,
+                                  borderColor: validationErrors.consoleId ? '#dc3545' : base.borderColor,
+                                  '&:hover': {
+                                    borderColor: validationErrors.consoleId ? '#dc3545' : base['&:hover'].borderColor
+                                  }
+                                })
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="flex-grow-1" style={{ marginLeft: '32px' }}>
+                          <div className="d-flex align-items-center">
+                            <label className="form-label mb-0 me-2" style={{ width: '40px', minWidth: '40px' }}>Title</label>
+                            <input
+                              type="text"
+                              className={`form-control ${validationErrors.title ? 'is-invalid' : ''}`}
+                              name="title"
+                              value={formData.title}
+                              onChange={handleInputChange}
+                              style={{ width: '100%' }}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
-                <div className="row mb-3" style={{ borderBottom: '1px solid #dee2e6', paddingBottom: '1rem' }}>
-                  <div className="col-md-4">
-                    <div className="d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '70px', minWidth: '70px' }}>Console</label>
-                      <Select
-                        value={consoles.find(c => c.id === formData.consoleId)}
-                        onChange={(option) => setFormData(prev => ({
-                          ...prev,
-                          consoleId: option ? option.id : null
-                        }))}
-                        options={consoles}
-                        getOptionLabel={option => option.name}
-                        getOptionValue={option => option.id}
-                        placeholder="Select Console..."
-                        className="flex-grow-1"
-                        styles={{
-                          control: (base, state) => ({
-                            ...base,
-                            borderColor: validationErrors.consoleId ? '#dc3545' : base.borderColor,
-                            '&:hover': {
-                              borderColor: validationErrors.consoleId ? '#dc3545' : base['&:hover'].borderColor
-                            }
-                          })
-                        }}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-2">
-                    <div className="d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '45px', minWidth: '45px' }}>Year</label>
-                      <input
-                        type="text"
-                        className={`form-control ${validationErrors.releaseYear ? 'is-invalid' : ''}`}
-                        name="releaseYear"
-                        value={formData.releaseYear}
-                        onChange={handleInputChange}
-                        placeholder="YYYY"
-                        maxLength="4"
-                        style={{ backgroundImage: 'none' }}
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-3">
-                    <div className="d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '60px', minWidth: '60px' }}>Region</label>
-                      <Select
-                        value={regions.find(r => r.id === formData.regionId)}
-                        onChange={handleRegionChange}
-                        options={regions}
-                        getOptionLabel={option => option.name}
-                        getOptionValue={option => option.id}
-                        isClearable
-                        placeholder="Select Region..."
-                        className="flex-grow-1"
-                      />
-                    </div>
-                  </div>
-                  <div className="col-md-3">
-                    <div className="d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '60px', minWidth: '60px' }}>Rating</label>
-                      <Select
-                        value={getCurrentRatingOption()}
-                        onChange={handleRatingChange}
-                        options={formatRatingOptions(availableRatings)}
-                        isDisabled={!formData.regionId}
-                        isClearable
-                        placeholder="Select Rating..."
-                        noOptionsMessage={() => formData.regionId ? "No ratings available" : "Select a region first"}
-                        className="flex-grow-1"
-                        styles={{
-                          control: (base) => ({
-                            ...base,
-                            minHeight: '38px'
-                          }),
-                          groupHeading: (base) => ({
-                            ...base,
-                            color: '#666',
-                            fontSize: '0.85em',
-                            fontWeight: 600,
-                            textTransform: 'none',
-                            padding: '4px 12px',
-                            backgroundColor: '#f8f9fa'
-                          }),
-                          option: (base, state) => ({
-                            ...base,
-                            fontSize: '0.9em',
-                            padding: '4px 12px',
-                            backgroundColor: state.isFocused ? '#e9ecef' : base.backgroundColor,
-                            color: '#333'
-                          })
-                        }}
-                      />
+                <div className="row mb-3">
+                  <div className="col-12">
+                    <div style={{ 
+                      backgroundColor: '#f8f9fa',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '8px',
+                      padding: '1rem'
+                    }}>
+                      <div className="row">
+                        <div className="col-md-4">
+                          <div className="d-flex align-items-center">
+                            <label className="form-label mb-0 me-4" style={{ width: '45px', minWidth: '45px' }}>Year</label>
+                            <Select
+                              value={formData.releaseYear ? { value: formData.releaseYear, label: formData.releaseYear } : null}
+                              onChange={(option) => setFormData(prev => ({
+                                ...prev,
+                                releaseYear: option ? option.value : ''
+                              }))}
+                              options={generateYearOptions()}
+                              isClearable
+                              placeholder="Year"
+                              className="flex-grow-1"
+                              styles={{
+                                control: (base) => ({
+                                  ...base,
+                                  minHeight: '38px'
+                                })
+                              }}
+                            />
+                          </div>
+                        </div>
+                        <div className="col-md-4">
+                          <div className="d-flex align-items-center">
+                            <label className="form-label mb-0 me-4" style={{ width: '60px', minWidth: '60px' }}>Region</label>
+                            <RegionSelect
+                              value={regions.find(r => r.id === formData.regionId)}
+                              onChange={handleRegionChange}
+                              regions={regions}
+                            />
+                          </div>
+                        </div>
+                        <div className="col-md-4">
+                          <div className="d-flex align-items-center">
+                            <label className="form-label mb-0 me-4" style={{ width: '60px', minWidth: '60px' }}>Rating</label>
+                            <RatingSelect
+                              value={getCurrentRatingOption()}
+                              onChange={handleRatingChange}
+                              ratings={availableRatings}
+                              isDisabled={!formData.regionId}
+                              noOptionsMessage={formData.regionId ? "No ratings available" : "Select a region first"}
+                            />
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="row mb-3">
-                  <div className="col-md-6">
-                    <div className="mb-3 d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '80px', minWidth: '80px' }}>Developer</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        name="developer"
-                        value={formData.developer}
-                        onChange={handleInputChange}
-                        placeholder="Developer"
-                      />
-                    </div>
-                    <div className="mb-3 d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '80px', minWidth: '80px' }}>Publisher</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        name="publisher"
-                        value={formData.publisher}
-                        onChange={handleInputChange}
-                        placeholder="Publisher"
-                      />
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '80px', minWidth: '80px' }}>Genre</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        name="genre"
-                        value={formData.genre}
-                        onChange={handleInputChange}
-                        placeholder="Genre"
-                      />
+                  <div className="col-md-8">
+                    <div style={{ 
+                      backgroundColor: '#f8f9fa',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '8px',
+                      padding: '1rem'
+                    }}>
+                      <div className="mb-3 d-flex align-items-center">
+                        <label className="form-label mb-0 me-4" style={{ width: '80px', minWidth: '80px' }}>Developer</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="developer"
+                          value={formData.developer}
+                          onChange={handleInputChange}
+                          placeholder="Developer"
+                        />
+                      </div>
+                      <div className="mb-3 d-flex align-items-center">
+                        <label className="form-label mb-0 me-4" style={{ width: '80px', minWidth: '80px' }}>Publisher</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="publisher"
+                          value={formData.publisher}
+                          onChange={handleInputChange}
+                          placeholder="Publisher"
+                        />
+                      </div>
+                      <div className="d-flex align-items-center">
+                        <label className="form-label mb-0 me-4" style={{ width: '80px', minWidth: '80px' }}>Genre</label>
+                        <input
+                          type="text"
+                          className="form-control"
+                          name="genre"
+                          value={formData.genre}
+                          onChange={handleInputChange}
+                          placeholder="Genre"
+                        />
+                      </div>
                     </div>
                   </div>
                   <div className="col-md-4">
-                    <div className="d-flex flex-column gap-3">
-                      <ToggleSwitch
-                        id="isKinect"
-                        checked={formData.isKinect}
-                        onChange={(checked) => setFormData(prev => ({
-                          ...prev,
-                          isKinect: checked
-                        }))}
-                        label="Kinect Required"
-                      />
-                      <ToggleSwitch
-                        id="isSpecial"
-                        checked={formData.isSpecial}
-                        onChange={(checked) => setFormData(prev => ({
-                          ...prev,
-                          isSpecial: checked
-                        }))}
-                        label="Special Edition"
-                      />
+                    <div style={{ 
+                      backgroundColor: '#f8f9fa',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '8px',
+                      padding: '1rem'
+                    }}>
+                      <div className="d-flex flex-column gap-3">
+                        <ToggleSwitch
+                          id="isKinect"
+                          checked={formData.isKinect}
+                          onChange={(checked) => setFormData(prev => ({
+                            ...prev,
+                            isKinect: checked
+                          }))}
+                          label="Kinect"
+                        />
+                        <ToggleSwitch
+                          id="isSpecial"
+                          checked={formData.isSpecial}
+                          onChange={(checked) => setFormData(prev => ({
+                            ...prev,
+                            isSpecial: checked
+                          }))}
+                          label="Special"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
 
                 <div className="row mb-3">
                   <div className="col-12">
-                    <div className="mb-3 d-flex align-items-center">
-                      <label 
-                        className="form-label mb-0 me-4" 
-                        style={{ 
-                          width: '100px', 
-                          minWidth: '100px',
-                          cursor: formData.pricechartingUrl ? 'pointer' : 'default'
-                        }}
-                        onClick={() => formData.pricechartingUrl && window.open(formData.pricechartingUrl, '_blank')}
-                      >
-                        Pricecharting
-                      </label>
-                      <input
-                        type="url"
-                        className={`form-control ${validationErrors.pricechartingUrl ? 'is-invalid' : ''}`}
-                        name="pricechartingUrl"
-                        value={formData.pricechartingUrl || ''}
-                        onChange={handleInputChange}
-                        placeholder="https://www.pricecharting.com/game/..."
-                        style={{ backgroundImage: 'none' }}
-                      />
-                    </div>
-                    <div className="d-flex align-items-center">
-                      <label className="form-label mb-0 me-4" style={{ width: '100px', minWidth: '100px' }}>Cover</label>
-                      <input
-                        type="url"
-                        className="form-control"
-                        name="coverUrl"
-                        value={formData.coverUrl || ''}
-                        onChange={handleInputChange}
-                        placeholder="https://..."
-                      />
+                    <div style={{ 
+                      backgroundColor: '#f8f9fa',
+                      border: '1px solid #dee2e6',
+                      borderRadius: '8px',
+                      padding: '1rem'
+                    }}>
+                      <div className="mb-3 d-flex align-items-center">
+                        <label 
+                          className="form-label mb-0 me-4" 
+                          style={{ 
+                            width: '100px', 
+                            minWidth: '100px',
+                            cursor: formData.pricechartingUrl ? 'pointer' : 'default'
+                          }}
+                          onClick={() => formData.pricechartingUrl && window.open(formData.pricechartingUrl, '_blank')}
+                        >
+                          Pricecharting
+                        </label>
+                        <div className="input-group">
+                          <input
+                            type="url"
+                            className={`form-control ${validationErrors.pricechartingUrl ? 'is-invalid' : ''}`}
+                            name="pricechartingUrl"
+                            value={formData.pricechartingUrl || ''}
+                            onChange={handleInputChange}
+                            placeholder="https://www.pricecharting.com/game/..."
+                            style={{ backgroundImage: 'none' }}
+                          />
+                          {formData.pricechartingUrl && (
+                            <button
+                              className="btn"
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, pricechartingUrl: '' }))}
+                              style={{
+                                position: 'absolute',
+                                right: '8px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                zIndex: 10,
+                                border: 'none',
+                                background: 'none',
+                                padding: '0 8px',
+                                color: '#999',
+                                fontSize: '20px',
+                                cursor: 'pointer',
+                                fontWeight: '300'
+                              }}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <div className="d-flex align-items-center">
+                        <label className="form-label mb-0 me-4" style={{ width: '100px', minWidth: '100px' }}>Cover</label>
+                        <div className="input-group">
+                          <input
+                            type="url"
+                            className="form-control"
+                            name="coverUrl"
+                            value={formData.coverUrl || ''}
+                            onChange={handleInputChange}
+                            placeholder="https://..."
+                          />
+                          {formData.coverUrl && (
+                            <button
+                              className="btn"
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, coverUrl: '' }))}
+                              style={{
+                                position: 'absolute',
+                                right: '8px',
+                                top: '50%',
+                                transform: 'translateY(-50%)',
+                                zIndex: 10,
+                                border: 'none',
+                                background: 'none',
+                                padding: '0 8px',
+                                color: '#999',
+                                fontSize: '20px',
+                                cursor: 'pointer',
+                                fontWeight: '300'
+                              }}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

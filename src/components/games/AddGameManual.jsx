@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import Select from 'react-select';
+import RegionSelect from '../ui/RegionSelect';
+import RatingSelect from '../ui/RatingSelect';
 
 const AddGameManual = ({ onGameAdded }) => {
   const [formData, setFormData] = useState({
     consoleId: null,
     title: '',
     regionId: null,
-    rating: null,
+    ratingId: null,
     pricechartingUrl: '',
     coverUrl: '',
     developer: '',
@@ -28,58 +30,6 @@ const AddGameManual = ({ onGameAdded }) => {
     loadAllRatings();
   }, []);
 
-  useEffect(() => {
-    if (formData.regionId) {
-      const region = regions.find(r => r.value === formData.regionId.value);
-      if (region) {
-        const regionRatings = ratings.filter(rating => {
-          if (region.label === 'PAL') {
-            return ['PEGI', 'ACB', 'USK', 'BBFC'].includes(rating.system);
-          } else if (region.label === 'NTSC-U') {
-            return rating.system === 'ESRB';
-          } else if (region.label === 'NTSC-J') {
-            return rating.system === 'CERO';
-          }
-          return false;
-        });
-
-        const groupedRatings = regionRatings.reduce((acc, rating) => {
-          if (!acc[rating.system]) {
-            acc[rating.system] = [];
-          }
-          acc[rating.system].push({
-            value: rating.name,
-            label: `${rating.name} - ${rating.description}`,
-            system: rating.system
-          });
-          return acc;
-        }, {});
-
-        const ratingOptions = [
-          { 
-            label: 'No Rating',
-            options: [{ value: '', label: 'No Rating Selected' }]
-          },
-          ...Object.entries(groupedRatings).map(([system, options]) => ({
-            label: system,
-            options: options
-          }))
-        ];
-
-        setAvailableRatings(ratingOptions);
-        
-        if (!formData.rating || !regionRatings.some(r => r.name === formData.rating.value)) {
-          setFormData(prev => ({ 
-            ...prev, 
-            rating: { value: '', label: 'No Rating Selected' }
-          }));
-        }
-      }
-    } else {
-      setAvailableRatings([]);
-    }
-  }, [formData.regionId, ratings, regions]);
-
   const loadConsoles = async () => {
     try {
       const response = await fetch('http://localhost:3001/api/consoles');
@@ -96,7 +46,7 @@ const AddGameManual = ({ onGameAdded }) => {
       const response = await fetch('http://localhost:3001/api/regions');
       if (!response.ok) throw new Error('Failed to fetch regions');
       const data = await response.json();
-      setRegions(data.map(r => ({ value: r.id, label: r.name })));
+      setRegions(data);
     } catch (error) {
       setError('Failed to load regions');
     }
@@ -107,11 +57,33 @@ const AddGameManual = ({ onGameAdded }) => {
       const response = await fetch('http://localhost:3001/api/ratings');
       if (!response.ok) throw new Error('Failed to fetch ratings');
       const data = await response.json();
-      const allRatings = Object.values(data).flat();
-      setRatings(allRatings);
+      setRatings(data);
     } catch (error) {
       setError('Failed to load ratings');
     }
+  };
+
+  const handleRegionChange = (selectedOption) => {
+    setFormData(prev => ({ 
+      ...prev, 
+      regionId: selectedOption?.id || null,
+      ratingId: null 
+    }));
+
+    if (selectedOption) {
+      const regionName = selectedOption.name;
+      const regionRatings = ratings.filter(rating => rating.region === regionName);
+      setAvailableRatings(regionRatings);
+    } else {
+      setAvailableRatings([]);
+    }
+  };
+
+  const handleRatingChange = (selectedOption) => {
+    setFormData(prev => ({
+      ...prev,
+      ratingId: selectedOption ? selectedOption.id : null
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -120,7 +92,6 @@ const AddGameManual = ({ onGameAdded }) => {
     setError('');
 
     try {
-      // First check if game already exists
       const response = await fetch(`http://localhost:3001/api/gamesdatabase/check`, {
         method: 'POST',
         headers: {
@@ -139,7 +110,6 @@ const AddGameManual = ({ onGameAdded }) => {
         throw new Error(checkResult.message || 'Game already exists in database');
       }
 
-      // If check passes, proceed with adding the game
       const addResponse = await fetch('http://localhost:3001/api/gamesdatabase', {
         method: 'POST',
         headers: {
@@ -148,8 +118,7 @@ const AddGameManual = ({ onGameAdded }) => {
         body: JSON.stringify({
           ...formData,
           consoleId: formData.consoleId?.value,
-          regionId: formData.regionId?.value,
-          rating: formData.rating?.value
+          ratingId: formData.ratingId
         })
       });
 
@@ -159,7 +128,7 @@ const AddGameManual = ({ onGameAdded }) => {
         consoleId: null,
         title: '',
         regionId: null,
-        rating: null,
+        ratingId: null,
         pricechartingUrl: '',
         coverUrl: '',
         developer: '',
@@ -188,7 +157,7 @@ const AddGameManual = ({ onGameAdded }) => {
         
         <form onSubmit={handleSubmit}>
           <div className="row mb-3">
-            <div className="col-md-6">
+            <div className="col-md-6 pe-4">
               <Select
                 placeholder="Select Console"
                 options={consoles}
@@ -196,9 +165,10 @@ const AddGameManual = ({ onGameAdded }) => {
                 onChange={option => setFormData(prev => ({ ...prev, consoleId: option }))}
                 isSearchable
                 required
+                className="w-100"
               />
             </div>
-            <div className="col-md-6">
+            <div className="col-md-6 ps-4">
               <input
                 type="text"
                 className="form-control"
@@ -212,24 +182,19 @@ const AddGameManual = ({ onGameAdded }) => {
 
           <div className="row mb-3">
             <div className="col-md-6">
-              <Select
-                placeholder="Select Region"
-                options={regions}
-                value={formData.regionId}
-                onChange={option => setFormData(prev => ({ ...prev, regionId: option }))}
-                isSearchable
-                required
-                isClearable
+              <RegionSelect
+                value={regions.find(r => r.id === formData.regionId)}
+                onChange={handleRegionChange}
+                regions={regions}
               />
             </div>
             <div className="col-md-6">
-              <Select
-                placeholder="Select Rating"
-                options={availableRatings}
-                value={formData.rating}
-                onChange={option => setFormData(prev => ({ ...prev, rating: option }))}
-                isSearchable
+              <RatingSelect
+                value={ratings.find(r => r.id === formData.ratingId)}
+                onChange={handleRatingChange}
+                ratings={availableRatings}
                 isDisabled={!formData.regionId}
+                noOptionsMessage={formData.regionId ? "No ratings available" : "Select a region first"}
               />
             </div>
           </div>
