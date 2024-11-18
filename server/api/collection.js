@@ -105,4 +105,86 @@ router.put('/collection/:id', (req, res) => {
   });
 });
 
+// Add this new endpoint for getting final prices
+router.get('/collection/prices', async (req, res) => {
+  try {
+    // First get all collection items with their game details
+    const sql = `
+      SELECT 
+        c.*,
+        g.Loose_NOK2,
+        g.CIB_NOK2,
+        g.NEW_NOK2,
+        g.title
+      FROM collection c
+      LEFT JOIN gamesdatabase g ON c.gameId = g.id
+    `;
+
+    db.all(sql, [], (err, items) => {
+      if (err) {
+        console.error('Error fetching collection prices:', err);
+        res.status(500).json({ error: err.message });
+        return;
+      }
+
+      // Calculate final price for each item
+      const itemsWithPrices = items.map(item => {
+        let finalPrice = null;
+        let priceType = null;
+
+        // Check price override first
+        if (item.price_override) {
+          finalPrice = item.price_override;
+          priceType = 'Override';
+        }
+        // Check if item is CIB (all conditions are present and not 'missing')
+        else if (
+          item.boxCondition && item.boxCondition !== 'missing' &&
+          item.manualCondition && item.manualCondition !== 'missing' &&
+          item.discCondition && item.discCondition !== 'missing'
+        ) {
+          finalPrice = item.CIB_NOK2;
+          priceType = 'CIB';
+        }
+        // If not CIB, use Loose price
+        else if (item.Loose_NOK2) {
+          finalPrice = item.Loose_NOK2;
+          priceType = 'Loose';
+        }
+        // No valid price available
+        else {
+          finalPrice = null;
+          priceType = 'No Price';
+        }
+
+        return {
+          id: item.id,
+          gameId: item.gameId,
+          title: item.title,
+          finalPrice,
+          priceType,
+          conditions: {
+            box: item.boxCondition,
+            manual: item.manualCondition,
+            disc: item.discCondition
+          }
+        };
+      });
+
+      res.json({
+        items: itemsWithPrices,
+        summary: {
+          total: itemsWithPrices.reduce((sum, item) => sum + (item.finalPrice || 0), 0),
+          itemCount: itemsWithPrices.length,
+          itemsWithPrice: itemsWithPrices.filter(item => item.finalPrice !== null).length,
+          itemsWithoutPrice: itemsWithPrices.filter(item => item.finalPrice === null).length
+        }
+      });
+    });
+  } catch (error) {
+    console.error('Error in collection prices endpoint:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 export default router; 

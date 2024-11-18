@@ -228,4 +228,11 @@ export const api = {
     if (!response.ok) throw new Error('Failed to fetch ratings');
     return await response.json();
   },
+
+  // Add to your api object
+  async getCollectionPrices() {
+    const response = await fetch(`${API_URL}/collection/prices`);
+    if (!response.ok) throw new Error('Failed to fetch collection prices');
+    return await response.json();
+  },
 }; 

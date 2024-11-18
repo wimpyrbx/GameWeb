@@ -73,13 +73,27 @@ const CollectionItemModal = ({
   };
 
   const getFinalPrice = () => {
-    if (formData.PriceOverride) {
-      return `kr ${formData.PriceOverride} (Override)`;
+    if (formData.price_override) {
+      return `kr ${formData.price_override} (Override)`;
     }
-    if (formData.isCib && game.CIB_NOK2) {
+
+    if (formData.isNew && game.NEW_NOK2) {
+      return `kr ${game.NEW_NOK2} (New)`;
+    }
+
+    const isCib = !['missing', '0'].includes(formData.boxCondition) && 
+                  !['missing', '0'].includes(formData.manualCondition) && 
+                  !['missing', '0'].includes(formData.discCondition);
+
+    if (isCib && game.CIB_NOK2) {
       return `kr ${game.CIB_NOK2} (CIB)`;
     }
-    return game.LOOSE_NOK2 ? `kr ${game.LOOSE_NOK2} (Loose)` : '-';
+
+    if (game.LOOSE_NOK2) {
+      return `kr ${game.LOOSE_NOK2} (Loose)`;
+    }
+
+    return 'No Price Available';
   };
 
   // Add click outside handler
@@ -87,6 +101,20 @@ const CollectionItemModal = ({
     if (e.target.classList.contains('modal-overlay')) {
       onClose();
     }
+  };
+
+  // Add handler for NEW switch
+  const handleNewChange = (checked) => {
+    setFormData(prev => ({
+      ...prev,
+      isNew: checked,
+      // If NEW is turned on, set all conditions to 5
+      ...(checked ? {
+        boxCondition: '5',
+        manualCondition: '5',
+        discCondition: '5'
+      } : {})
+    }));
   };
 
   if (!isOpen) return null;
@@ -129,65 +157,136 @@ const CollectionItemModal = ({
             </div>
 
             <div className="info-section">
-              <div className="condition-grid">
-                <div className="condition-item">
-                  <label>
-                    <BoxIcon size={16} className="me-2" />
-                    Box
-                  </label>
-                  <Select
-                    options={conditionOptions}
-                    value={conditionOptions.find(opt => opt.value === formData.boxCondition)}
-                    onChange={(option) => handleConditionChange('boxCondition', option.value)}
-                    className="condition-select"
-                  />
-                </div>
+              {/* Group 1: Condition and CIB Status */}
+              <div className="condition-group">
+                <div className="condition-grid">
+                  <div className="condition-item">
+                    <label>
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="24" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        className="me-3"
+                      >
+                        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+                        <path d="m3.3 7 8.7 5 8.7-5"></path>
+                        <path d="M12 22V12"></path>
+                      </svg>
+                      Box
+                    </label>
+                    <Select
+                      options={conditionOptions}
+                      value={conditionOptions.find(opt => opt.value === formData.boxCondition)}
+                      onChange={(option) => handleConditionChange('boxCondition', option.value)}
+                      className="condition-select"
+                    />
+                  </div>
 
-                <div className="condition-item">
-                  <label>
-                    <ManualIcon size={16} className="me-2" />
-                    Manual
-                  </label>
-                  <Select
-                    options={conditionOptions}
-                    value={conditionOptions.find(opt => opt.value === formData.manualCondition)}
-                    onChange={(option) => handleConditionChange('manualCondition', option.value)}
-                    className="condition-select"
-                  />
-                </div>
+                  <div className="condition-item">
+                    <label>
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="24" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        className="me-3"
+                      >
+                        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+                        <path d="m3.3 7 8.7 5 8.7-5"></path>
+                        <path d="M12 22V12"></path>
+                      </svg>
+                      Manual
+                    </label>
+                    <Select
+                      options={conditionOptions}
+                      value={conditionOptions.find(opt => opt.value === formData.manualCondition)}
+                      onChange={(option) => handleConditionChange('manualCondition', option.value)}
+                      className="condition-select"
+                    />
+                  </div>
 
-                <div className="condition-item">
-                  <label>
-                    <DiscIcon size={16} className="me-2" />
-                    Disc
-                  </label>
-                  <Select
-                    options={conditionOptions}
-                    value={conditionOptions.find(opt => opt.value === formData.discCondition)}
-                    onChange={(option) => handleConditionChange('discCondition', option.value)}
-                    className="condition-select"
-                  />
-                </div>
-              </div>
-
-              <div className={`cib-status ${formData.isCib ? 'is-cib' : 'not-cib'}`}>
-                {formData.isCib ? 'Complete In Box (CIB)' : 'Not Complete In Box'}
-              </div>
-
-              <div className="price-section">
-                <div className="price-grid">
-                  <div className="price-row">
-                    <span>Loose:</span>
-                    <span>kr {game.LOOSE_NOK2 || '-'}</span>
-                    <span>CIB:</span>
-                    <span>kr {game.CIB_NOK2 || '-'}</span>
-                    <span>New:</span>
-                    <span>kr {game.NEW_NOK2 || '-'}</span>
+                  <div className="condition-item">
+                    <label>
+                      <svg 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        width="24" 
+                        height="16" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round" 
+                        className="me-3"
+                      >
+                        <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+                        <path d="m3.3 7 8.7 5 8.7-5"></path>
+                        <path d="M12 22V12"></path>
+                      </svg>
+                      Disc
+                    </label>
+                    <Select
+                      options={conditionOptions}
+                      value={conditionOptions.find(opt => opt.value === formData.discCondition)}
+                      onChange={(option) => handleConditionChange('discCondition', option.value)}
+                      className="condition-select"
+                    />
                   </div>
                 </div>
 
-                <div className="price-override mt-3">
-                  <label>Price Override</label>
+                <div className={`cib-status ${formData.isCib ? 'is-cib' : 'not-cib'}`}>
+                  {formData.isCib ? 'Complete In Box (CIB)' : 'Not Complete In Box'}
+                </div>
+              </div>
+
+              {/* Group 2: PriceCharting and Prices */}
+              <div className="price-group">
+                {game.pricechartingUrl && (
+                  <>
+                    <a 
+                      href={game.pricechartingUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="pricecharting-link"
+                    >
+                      <img 
+                        src="/logos/pricecharting.png" 
+                        alt="PriceCharting" 
+                        height="20"
+                      />
+                    </a>
+
+                    <table className="price-table">
+                      <tbody>
+                        <tr>
+                          <td>Loose:</td>
+                          <td>kr {game.LOOSE_NOK2 || '-'}</td>
+                        </tr>
+                        <tr>
+                          <td>CIB:</td>
+                          <td>kr {game.CIB_NOK2 || '-'}</td>
+                        </tr>
+                        <tr>
+                          <td>New:</td>
+                          <td>kr {game.NEW_NOK2 || '-'}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </>
+                )}
+
+                <div className="price-override">
                   <div className="input-group">
                     <span className="input-group-text">
                       <DollarSign size={16} />
@@ -201,94 +300,84 @@ const CollectionItemModal = ({
                       step="0.01"
                     />
                   </div>
-                  <small className="text-muted">
-                    Leave empty to use PriceCharting values
-                  </small>
                 </div>
 
-                <div className="final-price mt-3">
-                  <h5>Final Price: {getFinalPrice()}</h5>
+                <div className="final-price">
+                  Final Price: {getFinalPrice()}
                 </div>
               </div>
 
-              <div className="flags-section mt-4">
+              {/* Group 3: Switches */}
+              <div className="flags-group">
                 <div className="flags-grid">
                   <div className="flag-item">
-                    <label className="d-flex align-items-center gap-2">
-                      <span>Kinect Required</span>
-                      <Switch
-                        checked={formData.isKinect}
-                        onChange={(checked) => setFormData(prev => ({ ...prev, isKinect: checked }))}
-                        onColor="#86d3ff"
-                        onHandleColor="#2693e6"
-                        handleDiameter={24}
-                        uncheckedIcon={false}
-                        checkedIcon={false}
-                        boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
-                        activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
-                        height={20}
-                        width={48}
-                        className="react-switch"
-                        disabled={game?.title?.toLowerCase().includes('kinect')}
-                      />
-                    </label>
+                    <span>Kinect</span>
+                    <Switch
+                      checked={formData.isKinect}
+                      onChange={(checked) => setFormData(prev => ({ ...prev, isKinect: checked }))}
+                      onColor="#86d3ff"
+                      onHandleColor="#2693e6"
+                      handleDiameter={24}
+                      uncheckedIcon={false}
+                      checkedIcon={false}
+                      boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
+                      activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
+                      height={20}
+                      width={48}
+                      className="react-switch"
+                      disabled={game?.title?.toLowerCase().includes('kinect')}
+                    />
                   </div>
                   <div className="flag-item">
-                    <label className="d-flex align-items-center gap-2">
-                      <span>Special Edition</span>
-                      <Switch
-                        checked={formData.isSpecial}
-                        onChange={(checked) => setFormData(prev => ({ ...prev, isSpecial: checked }))}
-                        onColor="#86d3ff"
-                        onHandleColor="#2693e6"
-                        handleDiameter={24}
-                        uncheckedIcon={false}
-                        checkedIcon={false}
-                        boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
-                        activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
-                        height={20}
-                        width={48}
-                        className="react-switch"
-                      />
-                    </label>
+                    <span>Special</span>
+                    <Switch
+                      checked={formData.isSpecial}
+                      onChange={(checked) => setFormData(prev => ({ ...prev, isSpecial: checked }))}
+                      onColor="#86d3ff"
+                      onHandleColor="#2693e6"
+                      handleDiameter={24}
+                      uncheckedIcon={false}
+                      checkedIcon={false}
+                      boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
+                      activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
+                      height={20}
+                      width={48}
+                      className="react-switch"
+                    />
                   </div>
                   <div className="flag-item">
-                    <label className="d-flex align-items-center gap-2">
-                      <span>New</span>
-                      <Switch
-                        checked={formData.isNew}
-                        onChange={(checked) => setFormData(prev => ({ ...prev, isNew: checked }))}
-                        onColor="#86d3ff"
-                        onHandleColor="#2693e6"
-                        handleDiameter={24}
-                        uncheckedIcon={false}
-                        checkedIcon={false}
-                        boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
-                        activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
-                        height={20}
-                        width={48}
-                        className="react-switch"
-                      />
-                    </label>
+                    <span>New</span>
+                    <Switch
+                      checked={formData.isNew}
+                      onChange={handleNewChange}
+                      onColor="#86d3ff"
+                      onHandleColor="#2693e6"
+                      handleDiameter={24}
+                      uncheckedIcon={false}
+                      checkedIcon={false}
+                      boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
+                      activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
+                      height={20}
+                      width={48}
+                      className="react-switch"
+                    />
                   </div>
                   <div className="flag-item">
-                    <label className="d-flex align-items-center gap-2">
-                      <span>Promo</span>
-                      <Switch
-                        checked={formData.isPromo}
-                        onChange={(checked) => setFormData(prev => ({ ...prev, isPromo: checked }))}
-                        onColor="#86d3ff"
-                        onHandleColor="#2693e6"
-                        handleDiameter={24}
-                        uncheckedIcon={false}
-                        checkedIcon={false}
-                        boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
-                        activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
-                        height={20}
-                        width={48}
-                        className="react-switch"
-                      />
-                    </label>
+                    <span>Promo</span>
+                    <Switch
+                      checked={formData.isPromo}
+                      onChange={(checked) => setFormData(prev => ({ ...prev, isPromo: checked }))}
+                      onColor="#86d3ff"
+                      onHandleColor="#2693e6"
+                      handleDiameter={24}
+                      uncheckedIcon={false}
+                      checkedIcon={false}
+                      boxShadow="0px 1px 5px rgba(0, 0, 0, 0.6)"
+                      activeBoxShadow="0px 0px 1px 10px rgba(0, 0, 0, 0.2)"
+                      height={20}
+                      width={48}
+                      className="react-switch"
+                    />
                   </div>
                 </div>
               </div>
@@ -395,53 +484,158 @@ const CollectionItemModal = ({
         }
 
         .flags-grid {
-          display: flex;
-          flex-direction: column;
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
           gap: 1rem;
+          padding: 0.5rem;
+          background: #f8f9fa;
+          border-radius: 6px;
+          border: 1px solid #dee2e6;
         }
 
         .flag-item {
           display: flex;
           align-items: center;
-        }
-
-        .flag-item label {
-          margin: 0;
-          cursor: pointer;
-          display: flex;
-          align-items: center;
           justify-content: space-between;
-          width: 100%;
-          font-weight: normal;
-          color: #495057;
-        }
-
-        .flag-item span {
-          font-size: 0.9rem;
+          padding: 0.5rem;
+          background: white;
+          border-radius: 4px;
         }
 
         .pricecharting-header {
-          display: flex;
-          justify-content: center;
-          padding: 1rem 0;
-          border-bottom: 1px solid #dee2e6;
-          margin-bottom: 1rem;
+          text-align: center;
+          padding: 0.5rem 0;
+          margin-bottom: 0.5rem;
         }
 
-        .pricecharting-logo {
-          height: 30px;
-          transition: opacity 0.2s;
-        }
-
-        .pricecharting-link:hover .pricecharting-logo {
+        .pricecharting-link:hover {
           opacity: 0.8;
+        }
+
+        .price-grid {
+          background: #f8f9fa;
+          padding: 0.5rem;
+          border-radius: 4px;
+          margin-bottom: 0.5rem;
+        }
+
+        .price-row {
+          display: grid;
+          grid-template-columns: auto 1fr auto 1fr auto 1fr;
+          gap: 0.5rem;
+          align-items: center;
+        }
+
+        .price-override {
+          margin: 0.5rem 0;
         }
 
         .flags-grid {
           display: grid;
           grid-template-columns: repeat(4, 1fr);
           gap: 1rem;
-          padding: 1rem 0;
+          padding: 0.5rem;
+        }
+
+        @media (max-width: 768px) {
+          .flags-grid {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+
+        .condition-group {
+          background: #f8f9fa;
+          padding: 0.75rem;
+          border-radius: 6px;
+          margin-bottom: 0.75rem;
+        }
+
+        .condition-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .condition-item {
+          display: flex;
+          flex-direction: column;
+          gap: 0.25rem;
+        }
+
+        .condition-item label {
+          display: flex;
+          align-items: center;
+          font-weight: 500;
+          color: #495057;
+          font-size: 0.9rem;
+        }
+
+        .cib-status {
+          text-align: center;
+          padding: 0.35rem;
+          border-radius: 4px;
+          font-weight: 500;
+          font-size: 0.9rem;
+          margin-top: 0.25rem;
+        }
+
+        .is-cib {
+          background-color: #d1fae5;
+          color: #065f46;
+        }
+
+        .not-cib {
+          background-color: #fee2e2;
+          color: #991b1b;
+        }
+
+        .price-group {
+          background: #f8f9fa;
+          padding: 0.75rem;
+          border-radius: 6px;
+          margin-bottom: 0.75rem;
+        }
+
+        .pricecharting-link {
+          display: block;
+          text-align: center;
+          margin-bottom: 0.25rem;
+        }
+
+        .price-grid {
+          background: white;
+          padding: 0.5rem;
+          border-radius: 4px;
+          margin: 0.25rem 0;
+        }
+
+        .price-row {
+          display: grid;
+          grid-template-columns: auto 1fr auto 1fr auto 1fr;
+          gap: 0.5rem;
+          align-items: center;
+          font-size: 0.9rem;
+        }
+
+        .price-override {
+          margin-top: 0.5rem;
+        }
+
+        .price-override small {
+          font-size: 0.8rem;
+        }
+
+        .flags-group {
+          background: #f8f9fa;
+          padding: 0.75rem;
+          border-radius: 6px;
+        }
+
+        .flags-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 0.75rem;
         }
 
         .flag-item {
@@ -458,16 +652,174 @@ const CollectionItemModal = ({
           width: 100%;
           font-weight: normal;
           color: #495057;
-        }
-
-        .flag-item span {
           font-size: 0.9rem;
         }
 
-        @media (max-width: 768px) {
-          .flags-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
+        .modal-body {
+          padding: 1rem;
+        }
+
+        .collection-item-details {
+          display: grid;
+          grid-template-columns: 200px 1fr;
+          gap: 1rem;
+        }
+
+        .cover-section {
+          width: 200px;
+        }
+
+        .game-cover {
+          width: 100%;
+          height: auto;
+          border-radius: 4px;
+        }
+
+        .placeholder-cover {
+          width: 100%;
+          aspect-ratio: 3/4;
+          background: #f8f9fa;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          border-radius: 4px;
+          color: #6c757d;
+        }
+
+        .price-table {
+          width: 100%;
+          background: white;
+          border-radius: 4px;
+          margin: 0.5rem 0;
+        }
+
+        .price-table td {
+          padding: 0.35rem 0.75rem;
+        }
+
+        .price-table td:first-child {
+          font-weight: 500;
+          width: 80px;
+        }
+
+        .price-table td:last-child {
+          text-align: right;
+        }
+
+        .final-price {
+          text-align: right;
+          font-weight: 500;
+          margin-top: 0.5rem;
+          padding: 0.5rem;
+          background: #f8f9fa;
+          border-radius: 4px;
+        }
+
+        .flags-grid {
+          display: flex;
+          justify-content: space-between;
+          gap: 1rem;
+          padding: 0.5rem;
+        }
+
+        .flag-item {
+          flex: 1;
+        }
+
+        .flag-item label {
+          width: 100%;
+          justify-content: space-between;
+        }
+
+        .condition-group,
+        .price-group,
+        .flags-group {
+          background: #f8f9fa;
+          padding: 0.75rem;
+          border-radius: 6px;
+          margin-bottom: 0.75rem;
+          border: 1px solid #dee2e6;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+        }
+
+        .condition-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 0.5rem;
+          margin-bottom: 0.5rem;
+        }
+
+        .flags-grid {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 0.5rem;
+          padding: 0.25rem;
+        }
+
+        .flag-item {
+          flex: 1;
+          min-width: 0; /* Prevent flex items from overflowing */
+        }
+
+        .flag-item label {
+          margin: 0;
+          cursor: pointer;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          width: 100%;
+          font-weight: normal;
+          color: #495057;
+          font-size: 0.9rem;
+          white-space: nowrap;
+        }
+
+        .flag-item span {
+          margin-right: 0.5rem;
+        }
+
+        .price-table {
+          width: 100%;
+          background: white;
+          border-radius: 4px;
+          margin: 0.5rem 0;
+        }
+
+        .price-table td {
+          padding: 0.35rem 0.75rem;
+        }
+
+        .price-table td:first-child {
+          font-weight: 500;
+          width: 80px;
+        }
+
+        .price-table td:last-child {
+          text-align: right;
+        }
+
+        .final-price {
+          text-align: right;
+          font-weight: 500;
+          margin-top: 0.5rem;
+          padding: 0.5rem;
+          background: white;
+          border-radius: 4px;
+        }
+
+        .modal-content {
+          background: white;
+          border-radius: 8px;
+          width: 100%;
+          max-width: 800px;
+          position: relative;
+          margin: 1rem;
+        }
+
+        .info-section {
+          padding: 0.5rem;
         }
       `}</style>
     </div>
