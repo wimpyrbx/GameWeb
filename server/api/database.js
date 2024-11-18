@@ -117,20 +117,76 @@ router.post('/clear-database', async (req, res) => {
   try {
     // Clear each table in sequence
     for (const table of clearableTables) {
-      await new Promise((resolve, reject) => {
-        db.run(`DELETE FROM ${table}`, [], (err) => {
-          if (err) reject(err);
-          resolve();
+      if (table === 'gamesdatabase') {
+        // Special handling for gamesdatabase to ensure proper recreation
+        await new Promise((resolve, reject) => {
+          db.run(`DROP TABLE IF EXISTS gamesdatabase`, (err) => {
+            if (err) reject(err);
+            
+            db.run(`
+              CREATE TABLE gamesdatabase (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                title TEXT NOT NULL,
+                consoleId INTEGER,
+                regionId INTEGER,
+                ratingId INTEGER,
+                pricechartingId TEXT,
+                pricechartingUrl TEXT,
+                coverUrl TEXT,
+                developer TEXT,
+                publisher TEXT,
+                releaseYear TEXT,
+                genre TEXT,
+                Loose_USD REAL,
+                CIB_USD REAL,
+                NEW_USD REAL,
+                BOX_USD REAL,
+                MANUAL_USD REAL,
+                Loose_NOK REAL,
+                CIB_NOK REAL,
+                NEW_NOK REAL,
+                BOX_NOK REAL,
+                MANUAL_NOK REAL,
+                Loose_NOK2 REAL,
+                CIB_NOK2 REAL,
+                NEW_NOK2 REAL,
+                BOX_NOK2 REAL,
+                MANUAL_NOK2 REAL,
+                isSpecial INTEGER DEFAULT 0,
+                isKinect INTEGER DEFAULT 0,
+                created_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime'))
+              )
+            `, (err) => {
+              if (err) reject(err);
+              resolve();
+            });
+          });
         });
-      });
-      
-      // Reset the auto-increment counter
-      await new Promise((resolve, reject) => {
-        db.run(`DELETE FROM sqlite_sequence WHERE name = ?`, [table], (err) => {
-          if (err) reject(err);
-          resolve();
+      } else if (table === 'collection') {
+        // Special handling for collection table
+        await new Promise((resolve, reject) => {
+          db.run(`DROP TABLE IF EXISTS collection`, (err) => {
+            if (err) reject(err);
+            
+            db.run(`
+              CREATE TABLE collection (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                gameId INTEGER NOT NULL,
+                consoleId INTEGER,
+                regionId INTEGER,
+                boxCondition TEXT,
+                discCondition TEXT,
+                manualCondition TEXT,
+                price_override REAL,
+                created_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime'))
+              )
+            `, (err) => {
+              if (err) reject(err);
+              resolve();
+            });
+          });
         });
-      });
+      }
     }
     
     res.json({ message: 'Database cleared successfully' });
