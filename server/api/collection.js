@@ -15,14 +15,15 @@ router.get('/collection', (req, res) => {
 router.post('/collection', (req, res) => {
   const { 
     gameId, 
+    consoleId,
+    regionId,
     boxCondition, 
     manualCondition, 
     discCondition,
-    isCib,
-    isNew,
-    isPromo,
-    notes,
-    PriceOverride
+    price_override,
+    isSpecial,
+    isKinect,
+    addedDate
   } = req.body;
   
   if (!gameId) {
@@ -30,20 +31,21 @@ router.post('/collection', (req, res) => {
   }
 
   const sql = `INSERT INTO collection (
-    gameId, boxCondition, manualCondition, discCondition,
-    isCib, isNew, isPromo, notes, PriceOverride
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`;
+    gameId, consoleId, regionId, boxCondition, manualCondition, 
+    discCondition, price_override, isSpecial, isKinect, created_at
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`;
   
   db.run(sql, [
     gameId,
+    consoleId || null,
+    regionId || null,
     boxCondition || null,
     manualCondition || null,
     discCondition || null,
-    isCib ? 1 : 0,
-    isNew ? 1 : 0,
-    isPromo ? 1 : 0,
-    notes || null,
-    PriceOverride || null
+    price_override || null,
+    isSpecial || 0,
+    isKinect || 0,
+    addedDate || new Date().toISOString()
   ], function(err) {
     if (err) {
       console.error('Error adding to collection:', err);
@@ -54,15 +56,15 @@ router.post('/collection', (req, res) => {
     res.json({
       id: this.lastID,
       gameId,
+      consoleId,
+      regionId,
       boxCondition,
       manualCondition,
       discCondition,
-      isCib,
-      isNew,
-      isPromo,
-      notes,
-      PriceOverride,
-      dateAdded: new Date().toISOString()
+      price_override,
+      isSpecial,
+      isKinect,
+      created_at: addedDate || new Date().toISOString()
     });
   });
 });

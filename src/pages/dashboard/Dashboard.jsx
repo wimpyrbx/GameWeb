@@ -176,21 +176,36 @@ const Dashboard = () => {
   const handleModalSave = async (formData) => {
     try {
       setLoading(true);
+      
+      if (modalData.isAdd) {
+        // Create the collection item object
+        const collectionItem = {
+          gameId: modalData.game.id,
+          consoleId: modalData.game.consoleId,
+          regionId: modalData.game.regionId,
+          boxCondition: formData.boxCondition,
+          discCondition: formData.discCondition,
+          manualCondition: formData.manualCondition,
+          price_override: formData.price_override || null,
+          isSpecial: formData.isSpecial || 0,
+          isKinect: formData.isKinect || 0,
+          addedDate: new Date().toISOString()
+        };
 
-      // Update the game in the database
-      await gamesDB.updateGame(formData.id, formData);
-
-      // Update the game in the state
-      setGames(prevGames =>
-        prevGames.map(game =>
-          game.id === formData.id ? { ...game, ...formData } : game
-        )
-      );
-
+        // Use the api service to add the item
+        await api.addCollection(collectionItem);
+        setSuccess(`Added "${modalData.game.title}" to collection`);
+      } else {
+        // Handle edit case
+        await api.updateCollectionItem(modalData.existingItem.id, formData);
+        setSuccess(`Updated "${modalData.game.title}" in collection`);
+      }
+      
+      await loadData(); // Reload the collection data
       setModalData({ isOpen: false, game: null, existingItem: null, isAdd: false });
-      setSuccess('Game updated successfully');
     } catch (error) {
-      setError('Failed to update game: ' + error.message);
+      console.error('Error saving collection item:', error);
+      setError('Failed to save: ' + error.message);
     } finally {
       setLoading(false);
     }
@@ -463,7 +478,7 @@ const Dashboard = () => {
                   onClick={handleQuickAdd}
                   disabled={!selectedGame || loading}
                 >
-                  {loading ? 'Adding...' : 'Quick Add'}
+                  {loading ? 'Adding...' : 'Add'}
                 </button>
               </div>
             </div>
