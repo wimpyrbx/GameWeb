@@ -5,6 +5,7 @@ import { Image } from 'lucide-react';
 
 const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show }) => {
   const [formData, setFormData] = useState(null);
+  const [initialData, setInitialData] = useState(null);
   const [availableRatings, setAvailableRatings] = useState([]);
   const [validationErrors, setValidationErrors] = useState({});
   const [isChecking, setIsChecking] = useState(false);
@@ -33,6 +34,7 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
         coverUrl: game.coverUrl || ''
       };
       setFormData(initialFormData);
+      setInitialData(initialFormData);
 
       if (game.regionId) {
         const regionName = getRegionName(game.regionId);
@@ -190,6 +192,22 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
     if (e.target === e.currentTarget) {
       onClose();
     }
+  };
+
+  // Add function to check if form has changes
+  const hasChanges = () => {
+    if (!initialData || !formData) return false;
+    
+    return Object.keys(initialData).some(key => {
+      // Handle special cases for boolean values
+      if (typeof initialData[key] === 'boolean') {
+        return Boolean(initialData[key]) !== Boolean(formData[key]);
+      }
+      // Handle null/undefined cases
+      if (!initialData[key] && !formData[key]) return false;
+      // Compare values
+      return initialData[key] !== formData[key];
+    });
   };
 
   if (!show || !formData) return null;
@@ -481,8 +499,8 @@ const EditGameModal = ({ game, regions, ratings, consoles, onSave, onClose, show
                   </button>
                   <button 
                     type="submit" 
-                    className="btn btn-primary"
-                    disabled={isChecking}
+                    className={`btn ${hasChanges() ? 'btn-primary' : 'btn-secondary opacity-50'}`}
+                    disabled={isChecking || !hasChanges()}
                   >
                     {isChecking ? 'Checking...' : 'Save Changes'}
                   </button>

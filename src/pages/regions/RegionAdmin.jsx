@@ -166,7 +166,7 @@ const RegionAdmin = () => {
                 <h3>Region List</h3>
                 <span className="badge badge-info">{regions.length} Regions</span>
               </div>
-              <div className="card-body p-0">
+              <div className="card-body">
                 <table className="table mb-0">
                   <thead>
                     <tr>

@@ -96,7 +96,6 @@ const DatabaseViewer = () => {
   return (
     <div className="content-wrapper">
       <div className="content-body">
-        <h2>Database Viewer</h2>
         {error && <div className="alert alert-danger">{error}</div>}
         <div className="row mb-4">
           <div className="col-md-3">
