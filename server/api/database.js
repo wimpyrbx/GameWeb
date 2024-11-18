@@ -178,6 +178,8 @@ router.post('/clear-database', async (req, res) => {
                 discCondition TEXT,
                 manualCondition TEXT,
                 price_override REAL,
+                isSpecial INTEGER DEFAULT 0,
+                isKinect INTEGER DEFAULT 0,
                 created_at DATETIME NOT NULL DEFAULT (datetime('now', 'localtime'))
               )
             `, (err) => {

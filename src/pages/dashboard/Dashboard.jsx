@@ -44,6 +44,8 @@ const Dashboard = () => {
   const [success, setSuccess] = useState('');
   const [itemsPerPage, setItemsPerPage] = useState(10); // New state for items per page
   const [currentPage, setCurrentPage] = useState(1); // New state for current page
+  const [showKinectOnly, setShowKinectOnly] = useState(false);
+  const [showSpecialOnly, setShowSpecialOnly] = useState(false);
 
   useEffect(() => {
     const loadViewType = async () => {
@@ -195,13 +197,27 @@ const Dashboard = () => {
   };
 
   const filterCollectionItems = (items) => {
-    if (!searchQuery) return items;
+    if (!searchQuery && !showKinectOnly && !showSpecialOnly) return items;
     
     return items.filter(item => {
       const game = games.find(g => g.id === item.gameId);
       const console = consoles.find(c => c.id === item.consoleId);
-      const searchString = `${game?.title || ''} ${console?.name || ''}`.toLowerCase();
-      return searchString.includes(searchQuery.toLowerCase());
+      let matches = true;
+
+      if (searchQuery) {
+        const searchString = `${game?.title || ''} ${console?.name || ''}`.toLowerCase();
+        matches = matches && searchString.includes(searchQuery.toLowerCase());
+      }
+
+      if (showKinectOnly) {
+        matches = matches && item.isKinect === 1;
+      }
+
+      if (showSpecialOnly) {
+        matches = matches && item.isSpecial === 1;
+      }
+
+      return matches;
     });
   };
 
@@ -458,12 +474,50 @@ const Dashboard = () => {
           <div className="card-header d-flex justify-content-between align-items-center">
             <div className="d-flex align-items-center gap-3">
               <h3>Collection Items ({
-                searchQuery 
+                searchQuery || showKinectOnly || showSpecialOnly
                   ? `${filterCollectionItems(collection).length} of ${collection.length} Items` 
                   : `${collection.length} Items`
               })</h3>
             </div>
             <div className="d-flex align-items-center gap-3">
+              <button
+                className={`btn btn-outline-secondary d-flex align-items-center justify-content-center`}
+                onClick={() => setShowKinectOnly(!showKinectOnly)}
+                title={showKinectOnly ? "Showing Kinect games only" : "Click to show Kinect games only"}
+                style={{ 
+                  padding: '4px 12px',
+                  height: '31px',
+                  opacity: showKinectOnly ? 1 : 0.5
+                }}
+              >
+                <img 
+                  src="/logos/kinect.webp" 
+                  alt="Kinect"
+                  style={{ 
+                    height: '16px',
+                    filter: 'none'
+                  }} 
+                />
+              </button>
+              <button
+                className={`btn btn-outline-secondary d-flex align-items-center justify-content-center`}
+                onClick={() => setShowSpecialOnly(!showSpecialOnly)}
+                title={showSpecialOnly ? "Showing Special Editions only" : "Click to show Special Editions only"}
+                style={{ 
+                  padding: '4px 12px',
+                  height: '31px',
+                  opacity: showSpecialOnly ? 1 : 0.5
+                }}
+              >
+                <img 
+                  src="/logos/specials.webp" 
+                  alt="Special Edition"
+                  style={{ 
+                    height: '16px',
+                    filter: 'none'
+                  }} 
+                />
+              </button>
               <Select
                 value={{ value: itemsPerPage, label: `${itemsPerPage} items` }}
                 onChange={async (option) => {

@@ -273,7 +273,9 @@ const Games = () => {
           <div className="col-12">
             <div className="card">
               <div className="card-header d-flex justify-content-between align-items-center">
-                <h3>Games Database ({searchQuery || showKinectOnly ? `${filteredGames.length} of ${totalGames} Games` : `${totalGames} Games`})</h3>
+                <h3>Games Database ({searchQuery || showKinectOnly || showSpecialOnly ? 
+                  `${filteredGames.length} of ${totalGames} Games` : 
+                  `${totalGames} Games`})</h3>
                 <div className="d-flex gap-3 align-items-center">
                   <button
                     className={`btn btn-outline-secondary d-flex align-items-center justify-content-center`}
