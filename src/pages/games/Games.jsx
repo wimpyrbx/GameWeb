@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import ImportGames from '../../components/games/ImportGames';
 import AddGameManual from '../../components/games/AddGameManual';
 import RatingIcon from '../../components/ui/RatingIcon';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Gamepad } from 'lucide-react';
 import { Image } from 'lucide-react';
 import { api } from '../../services/api';
 import Select from 'react-select';
@@ -24,6 +24,35 @@ const Games = () => {
   const [regions, setRegions] = useState([]);
   const [savedGameId, setSavedGameId] = useState(null);
   const [totalGames, setTotalGames] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showKinectOnly, setShowKinectOnly] = useState(false);
+  const [showSpecialOnly, setShowSpecialOnly] = useState(false);
+
+  const filteredGames = useMemo(() => {
+    let filtered = games;
+    
+    if (showKinectOnly) {
+      filtered = filtered.filter(game => game.isKinect === 1);
+    }
+    
+    if (showSpecialOnly) {
+      filtered = filtered.filter(game => game.isSpecial === 1);
+    }
+    
+    if (searchQuery.trim()) {
+      filtered = filtered.filter(game => 
+        game.title.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    return filtered;
+  }, [games, searchQuery, showKinectOnly, showSpecialOnly]);
+
+  const paginatedGames = useMemo(() => {
+    const startIndex = (currentPage - 1) * gamesPerPage;
+    const endIndex = startIndex + gamesPerPage;
+    return filteredGames.slice(startIndex, endIndex);
+  }, [filteredGames, currentPage, gamesPerPage]);
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -47,11 +76,11 @@ const Games = () => {
     loadSettings();
   }, []);
 
-  const loadGames = async (page = 1, limit = gamesPerPage) => {
+  const loadGames = async () => {
     try {
       setLoading(true);
       const [gamesResponse, consolesResponse, collectionResponse, ratingsResponse] = await Promise.all([
-        fetch(`http://localhost:3001/api/gamesdatabase?page=${page}&limit=${limit}`),
+        fetch(`http://localhost:3001/api/gamesdatabase?limit=999999`),
         fetch('http://localhost:3001/api/consoles'),
         fetch('http://localhost:3001/api/collection'),
         fetch('http://localhost:3001/api/ratings')
@@ -71,9 +100,7 @@ const Games = () => {
       setGames(gamesData.data);
       setConsoles(consolesData);
       setCollectionGames(collectionData.map(game => game.gameId));
-      setTotalPages(gamesData.pagination.totalPages);
-      setTotalGames(gamesData.pagination.total);
-      setCurrentPage(page);
+      setTotalGames(gamesData.data.length);
     } catch (error) {
       console.error('Error loading data:', error);
       setError('Failed to load data');
@@ -83,8 +110,8 @@ const Games = () => {
   };
 
   useEffect(() => {
-    loadGames(currentPage);
-  }, [currentPage]);
+    loadGames();
+  }, []);
 
   const handleGameAdded = () => {
     loadGames(currentPage);
@@ -131,7 +158,7 @@ const Games = () => {
   };
 
   const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
+    setCurrentPage(Math.min(newPage, totalFilteredPages));
   };
 
   const handleItemsPerPageChange = async (newValue) => {
@@ -167,7 +194,12 @@ const Games = () => {
 
       setGames(prevGames =>
         prevGames.map(game =>
-          game.id === updatedGame.id ? { ...game, ...updatedGame } : game
+          game.id === updatedGame.id ? {
+            ...game,
+            ...updatedGame,
+            isSpecial: updatedGame.isSpecial ? 1 : 0,  // Ensure boolean to integer conversion
+            isKinect: updatedGame.isKinect ? 1 : 0     // Ensure boolean to integer conversion
+          } : game
         )
       );
 
@@ -202,26 +234,28 @@ const Games = () => {
         </button>
       </div>
       <div className="text-muted">
-        Page {currentPage} of {totalPages}
+        Page {currentPage} of {totalFilteredPages}
       </div>
       <div>
         <button 
           className="btn btn-outline-primary me-2"
           onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages || loading}
+          disabled={currentPage === totalFilteredPages || loading}
         >
           Next
         </button>
         <button 
           className="btn btn-outline-primary"
-          onClick={() => handlePageChange(totalPages)}
-          disabled={currentPage === totalPages || loading}
+          onClick={() => handlePageChange(totalFilteredPages)}
+          disabled={currentPage === totalFilteredPages || loading}
         >
           Last
         </button>
       </div>
     </div>
   );
+
+  const totalFilteredPages = Math.ceil(filteredGames.length / gamesPerPage);
 
   return (
     <div className="content-wrapper">
@@ -239,46 +273,94 @@ const Games = () => {
           <div className="col-12">
             <div className="card">
               <div className="card-header d-flex justify-content-between align-items-center">
-                <h3>Games Database ({totalGames} Games)</h3>
-                <Select
-                  value={{ value: gamesPerPage, label: `${gamesPerPage} items` }}
-                  onChange={(option) => handleItemsPerPageChange(option.value)}
-                  options={[
-                    { value: 10, label: '10 items' },
-                    { value: 25, label: '25 items' },
-                    { value: 50, label: '50 items' }
-                  ]}
-                  className="items-per-page-select"
-                  classNamePrefix="items-per-page"
-                  isSearchable={false}
-                  styles={{
-                    control: (base) => ({
-                      ...base,
-                      minHeight: '31px',
-                      height: '31px'
-                    }),
-                    valueContainer: (base) => ({
-                      ...base,
+                <h3>Games Database ({searchQuery || showKinectOnly ? `${filteredGames.length} of ${totalGames} Games` : `${totalGames} Games`})</h3>
+                <div className="d-flex gap-3 align-items-center">
+                  <button
+                    className={`btn btn-outline-secondary d-flex align-items-center justify-content-center`}
+                    onClick={() => setShowKinectOnly(!showKinectOnly)}
+                    title={showKinectOnly ? "Showing Kinect games only" : "Click to show Kinect games only"}
+                    style={{ 
+                      padding: '4px 12px',
                       height: '31px',
-                      padding: '0 8px'
-                    }),
-                    input: (base) => ({
-                      ...base,
-                      margin: '0px'
-                    }),
-                    indicatorSeparator: () => ({
-                      display: 'none'
-                    }),
-                    dropdownIndicator: (base) => ({
-                      ...base,
-                      padding: '4px'
-                    }),
-                    menu: (base) => ({
-                      ...base,
-                      zIndex: 999
-                    })
-                  }}
-                />
+                      opacity: showKinectOnly ? 1 : 0.5
+                    }}
+                  >
+                    <img 
+                      src="/logos/kinect.webp" 
+                      alt="Kinect"
+                      style={{ 
+                        height: '16px',
+                        filter: 'none'
+                      }} 
+                    />
+                  </button>
+                  <button
+                    className={`btn btn-outline-secondary d-flex align-items-center justify-content-center`}
+                    onClick={() => setShowSpecialOnly(!showSpecialOnly)}
+                    title={showSpecialOnly ? "Showing Special Editions only" : "Click to show Special Editions only"}
+                    style={{ 
+                      padding: '4px 12px',
+                      height: '31px',
+                      opacity: showSpecialOnly ? 1 : 0.5
+                    }}
+                  >
+                    <img 
+                      src="/logos/specials.webp" 
+                      alt="Special Edition"
+                      style={{ 
+                        height: '16px',
+                        filter: 'none'
+                      }} 
+                    />
+                  </button>
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Search game titles..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    style={{ width: '250px' }}
+                  />
+                  <Select
+                    value={{ value: gamesPerPage, label: `${gamesPerPage} items` }}
+                    onChange={(option) => handleItemsPerPageChange(option.value)}
+                    options={[
+                      { value: 10, label: '10 items' },
+                      { value: 25, label: '25 items' },
+                      { value: 50, label: '50 items' }
+                    ]}
+                    className="items-per-page-select"
+                    classNamePrefix="items-per-page"
+                    isSearchable={false}
+                    styles={{
+                      control: (base) => ({
+                        ...base,
+                        minHeight: '31px',
+                        height: '31px'
+                      }),
+                      valueContainer: (base) => ({
+                        ...base,
+                        height: '31px',
+                        padding: '0 8px'
+                      }),
+                      input: (base) => ({
+                        ...base,
+                        margin: '0px'
+                      }),
+                      indicatorSeparator: () => ({
+                        display: 'none'
+                      }),
+                      dropdownIndicator: (base) => ({
+                        ...base,
+                        padding: '4px'
+                      }),
+                      menu: (base) => ({
+                        ...base,
+                        zIndex: 999
+                      })
+                    }}
+                  />
+                </div>
               </div>
               <div className="card-body">
                 {loading ? (
@@ -299,11 +381,12 @@ const Games = () => {
                             <th style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>Loose</th>
                             <th style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>CIB</th>
                             <th style={{ whiteSpace: 'nowrap', textAlign: 'left', width: '136px' }}>New</th>
+                            <th style={{ whiteSpace: 'nowrap', width: '150px' }}>Added</th>
                             <th style={{ width: '80px', textAlign: 'center' }}>Actions</th>
                           </tr>
                         </thead>
                         <tbody>
-                          {games.map(game => (
+                          {paginatedGames.map(game => (
                             <tr 
                               key={game.id} 
                               onClick={() => handleEdit(game)}
@@ -434,6 +517,9 @@ const Games = () => {
                                     <span><strong>{formatNOKPrice(game.NEW_NOK2)}</strong></span>
                                   </div>
                                 </small>
+                              </td>
+                              <td>
+                                {new Date(game.created_at).toLocaleString()}
                               </td>
                               <td>
                                 <div className="d-flex gap-2 justify-content-center">
