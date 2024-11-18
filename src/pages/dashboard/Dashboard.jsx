@@ -48,17 +48,21 @@ const Dashboard = () => {
   const [showSpecialOnly, setShowSpecialOnly] = useState(false);
 
   useEffect(() => {
-    const loadViewType = async () => {
-      const [savedViewType, savedPageSize] = await Promise.all([
+    const loadSettings = async () => {
+      const [savedViewType, savedPageSize, savedKinectFilter, savedSpecialFilter] = await Promise.all([
         getSetting('collectionViewType'),
-        getSetting('collectionPageSize')
+        getSetting('collectionPageSize'),
+        getSetting('collectionFilterKinect'),
+        getSetting('collectionFilterSpecial')
       ]);
       
       setViewType(savedViewType || 'card');
       setItemsPerPage(savedPageSize ? parseInt(savedPageSize) : 10);
+      setShowKinectOnly(savedKinectFilter === '1');
+      setShowSpecialOnly(savedSpecialFilter === '1');
       loadData();
     };
-    loadViewType();
+    loadSettings();
   }, []);
 
   const loadData = async () => {
@@ -426,6 +430,18 @@ const Dashboard = () => {
     });
   };
 
+  const toggleKinectFilter = async () => {
+    const newValue = !showKinectOnly;
+    setShowKinectOnly(newValue);
+    await saveSetting('collectionFilterKinect', newValue ? '1' : '0');
+  };
+
+  const toggleSpecialFilter = async () => {
+    const newValue = !showSpecialOnly;
+    setShowSpecialOnly(newValue);
+    await saveSetting('collectionFilterSpecial', newValue ? '1' : '0');
+  };
+
   return (
     <div className="content-wrapper">
       <Sidebar />
@@ -497,7 +513,7 @@ const Dashboard = () => {
             <div className="d-flex align-items-center gap-3">
               <button
                 className={`btn btn-outline-secondary d-flex align-items-center justify-content-center`}
-                onClick={() => setShowKinectOnly(!showKinectOnly)}
+                onClick={toggleKinectFilter}
                 title={showKinectOnly ? "Showing Kinect games only" : "Click to show Kinect games only"}
                 style={{ 
                   padding: '4px 12px',
@@ -516,7 +532,7 @@ const Dashboard = () => {
               </button>
               <button
                 className={`btn btn-outline-secondary d-flex align-items-center justify-content-center`}
-                onClick={() => setShowSpecialOnly(!showSpecialOnly)}
+                onClick={toggleSpecialFilter}
                 title={showSpecialOnly ? "Showing Special Editions only" : "Click to show Special Editions only"}
                 style={{ 
                   padding: '4px 12px',

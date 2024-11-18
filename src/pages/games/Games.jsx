@@ -57,20 +57,24 @@ const Games = () => {
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const [settingsResponse, regionsResponse] = await Promise.all([
+        const [settingsResponse, regionsResponse, kinectFilter, specialFilter] = await Promise.all([
           api.getSetting('gamesdatabasePageSize'),
-          api.getAllRegions()
+          api.getAllRegions(),
+          api.getSetting('gamesdatabaseFilterKinect'),
+          api.getSetting('gamesdatabaseFilterSpecial')
         ]);
         
         if (settingsResponse && settingsResponse.value) {
           setGamesPerPage(parseInt(settingsResponse.value));
-          loadGames(1, parseInt(settingsResponse.value));
         }
         
         setRegions(regionsResponse);
+        setShowKinectOnly(kinectFilter?.value === '1');
+        setShowSpecialOnly(specialFilter?.value === '1');
+        loadGames(1, gamesPerPage);
       } catch (error) {
         console.error('Error loading settings:', error);
-        loadGames(1, gamesPerPage);
+        setError('Failed to load settings');
       }
     };
     loadSettings();
@@ -257,6 +261,18 @@ const Games = () => {
 
   const totalFilteredPages = Math.ceil(filteredGames.length / gamesPerPage);
 
+  const toggleKinectFilter = async () => {
+    const newValue = !showKinectOnly;
+    setShowKinectOnly(newValue);
+    await api.saveSetting('gamesdatabaseFilterKinect', newValue ? '1' : '0');
+  };
+
+  const toggleSpecialFilter = async () => {
+    const newValue = !showSpecialOnly;
+    setShowSpecialOnly(newValue);
+    await api.saveSetting('gamesdatabaseFilterSpecial', newValue ? '1' : '0');
+  };
+
   return (
     <div className="content-wrapper">
       <div className="content-body">
@@ -279,7 +295,7 @@ const Games = () => {
                 <div className="d-flex gap-3 align-items-center">
                   <button
                     className={`btn btn-outline-secondary d-flex align-items-center justify-content-center`}
-                    onClick={() => setShowKinectOnly(!showKinectOnly)}
+                    onClick={() => toggleKinectFilter()}
                     title={showKinectOnly ? "Showing Kinect games only" : "Click to show Kinect games only"}
                     style={{ 
                       padding: '4px 12px',
@@ -298,7 +314,7 @@ const Games = () => {
                   </button>
                   <button
                     className={`btn btn-outline-secondary d-flex align-items-center justify-content-center`}
-                    onClick={() => setShowSpecialOnly(!showSpecialOnly)}
+                    onClick={() => toggleSpecialFilter()}
                     title={showSpecialOnly ? "Showing Special Editions only" : "Click to show Special Editions only"}
                     style={{ 
                       padding: '4px 12px',
